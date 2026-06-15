@@ -34,4 +34,11 @@ export interface SessionUser {
   id: string;
   email: string;
   role: UserRole;
+  emailConfirmed?: boolean;
+}
+
+export interface RegisterRequestDto {
+  displayName: string;
+  email: string;
+  password: string;
 }

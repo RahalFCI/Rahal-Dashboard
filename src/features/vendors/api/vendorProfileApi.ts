@@ -42,6 +42,14 @@ export function approveVendorProfile(userId: string) {
   });
 }
 
+export function createVendorProfile(body: UpsertVendorProfileDto) {
+  return apiClient<string>({
+    method: 'POST',
+    url: '/VendorProfile/create',
+    data: toVendorProfileFormData(body),
+  });
+}
+
 export function updateVendorProfile(userId: string, body: UpsertVendorProfileDto) {
   return apiClient<string>({
     method: 'PUT',

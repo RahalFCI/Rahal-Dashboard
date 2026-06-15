@@ -1,11 +1,10 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.js";
 
 @layer base {
   :root {
-    color: #2c2f30;
-    background: #f5f6f7;
+    color: #1f1b15;
+    background: #fff8f2;
     font-family: 'Space Grotesk', Inter, ui-sans-serif, system-ui, sans-serif;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
@@ -21,9 +20,7 @@
     margin: 0;
     min-width: 320px;
     min-height: 100vh;
-    background:
-      linear-gradient(180deg, rgba(255, 222, 160, 0.26), transparent 280px),
-      #f5f6f7;
+    background: #fff8f2;
   }
 
   button,
@@ -47,7 +44,7 @@
 
   .focus-ring:focus-visible {
     box-shadow:
-      0 0 0 2px #f5f6f7,
+      0 0 0 2px #fff8f2,
       0 0 0 4px #755700;
   }
 }

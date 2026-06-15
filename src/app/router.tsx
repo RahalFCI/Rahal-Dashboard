@@ -1,8 +1,10 @@
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
 import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage } from '@/features/auth/pages/AccountRecoveryPages';
 import { LoginPage } from '@/features/auth/pages/LoginPage';
+import { RegisterPage } from '@/features/auth/pages/RegisterPage';
 import { CategoriesPage } from '@/features/places/pages/CategoriesPage';
 import { PlacesPage } from '@/features/places/pages/PlacesPage';
+import { VendorDashboardPage } from '@/features/vendors/pages/VendorDashboardPage';
 import { VendorPlaceDetailPage } from '@/features/vendors/pages/VendorPlaceDetailPage';
 import { VendorPlacesPage } from '@/features/vendors/pages/VendorPlacesPage';
 import { VendorProfilePage } from '@/features/vendors/pages/VendorProfilePage';
@@ -13,6 +15,7 @@ import { RequireAuth } from './route-guards';
 
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
+  { path: '/register', element: <RegisterPage /> },
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
   { path: '/reset-password', element: <ResetPasswordPage /> },
   { path: '/verify-email', element: <VerifyEmailPage /> },
@@ -54,6 +57,14 @@ const router = createBrowserRouter([
         element: (
           <RequireAuth roles={['Admin']}>
             <CategoriesPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'vendor/dashboard',
+        element: (
+          <RequireAuth roles={['Vendor']}>
+            <VendorDashboardPage />
           </RequireAuth>
         ),
       },

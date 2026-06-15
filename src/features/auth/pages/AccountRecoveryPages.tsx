@@ -1,12 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { KeyRound, MailCheck } from 'lucide-react';
+import { Archive, KeyRound, MailCheck } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
 import { FieldError } from '@/shared/components/ui/field-error';
 import { Input } from '@/shared/components/ui/input';
-import { Label } from '@/shared/components/ui/label';
+import { ApiError } from '@/shared/api/errors';
 import { forgotPassword, resendVerification, resetPassword, verifyEmail } from '../api/authApi';
 import {
   forgotPasswordSchema,
@@ -30,22 +30,54 @@ function AuthPanel({
 }) {
   return (
     <main className="grid min-h-screen place-items-center bg-surface px-6 py-10 text-on-surface">
-      <section className="w-full max-w-md rounded-xl bg-surface-lowest p-6 shadow-ambient">
-        <div className="mb-7 flex items-start gap-3">
-          <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-primary-container text-primary">
+      {/* Soft ambient warm gradient */}
+      <div className="pointer-events-none fixed inset-0 bg-gradient-to-br from-primary/[0.05] via-transparent to-transparent" />
+
+      <section className="relative w-full max-w-md">
+        {/* Brand mark */}
+        <div className="mb-10 flex items-center gap-3">
+          <span className="grid size-9 place-items-center rounded-lg bg-primary text-white">
+            <Archive size={17} />
+          </span>
+          <div>
+            <p className="text-sm font-semibold leading-none text-on-surface">Rahal</p>
+            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-on-surface-variant">
+              Relic Modernism
+            </p>
+          </div>
+        </div>
+
+        {/* Panel header */}
+        <div className="mb-9 flex items-start gap-4">
+          <span className="mt-0.5 grid size-10 shrink-0 place-items-center rounded-lg bg-primary-container text-primary">
             {icon}
           </span>
           <div>
-            <h1 className="text-xl font-semibold">{title}</h1>
-            <p className="mt-1 text-sm leading-6 text-on-surface-variant">{description}</p>
+            <h1 className="text-2xl font-semibold text-on-surface">{title}</h1>
+            <p className="mt-1.5 text-sm leading-6 text-on-surface-variant">{description}</p>
           </div>
         </div>
+
         {children}
-        <Button asChild variant="ghost" className="mt-5 w-full">
-          <Link to="/login">Back to sign in</Link>
-        </Button>
+
+        <div className="mt-6 border-t border-outline-variant/40 pt-5">
+          <Button asChild variant="ghost" className="w-full text-on-surface-variant hover:text-on-surface">
+            <Link to="/login">← Back to sign in</Link>
+          </Button>
+        </div>
       </section>
     </main>
+  );
+}
+
+function FieldGroup({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <label className="text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+        {label}
+      </label>
+      {children}
+    </div>
   );
 }
 
@@ -56,34 +88,43 @@ export function ForgotPasswordPage() {
   });
 
   async function onSubmit(values: ForgotPasswordFormValues) {
-    await forgotPassword(values);
-    form.reset(values);
-    form.setError('root', { message: 'If the account exists, a reset code has been sent.' });
+    try {
+      await forgotPassword(values);
+      form.reset(values);
+      form.setError('root', { type: 'success', message: 'If the account exists, a reset code has been sent.' });
+    } catch (err) {
+      if (err instanceof ApiError && err.tier === 'screen') {
+        form.setError('root', { type: 'error', message: err.message });
+      }
+    }
   }
 
   return (
     <AuthPanel
-      icon={<KeyRound size={21} />}
+      icon={<KeyRound size={19} />}
       title="Reset password"
       description="Request a reset code for the account email."
     >
-      <form className="grid gap-4" onSubmit={form.handleSubmit(onSubmit)}>
-        <div>
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" autoComplete="email" {...form.register('email')} />
+      <form className="space-y-7" onSubmit={form.handleSubmit(onSubmit)}>
+        <FieldGroup label="Email">
+          <Input id="email" type="email" autoComplete="email" placeholder="you@example.com" {...form.register('email')} />
           <FieldError message={form.formState.errors.email?.message} />
-        </div>
+        </FieldGroup>
+
         {form.formState.errors.root?.message ? (
-          <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+          <p className={`rounded-lg px-3 py-2.5 text-sm ${form.formState.errors.root.type === 'error' ? 'bg-error-container text-error' : 'bg-[#e8f5e9] text-[#2e7d32]'}`}>
             {form.formState.errors.root.message}
           </p>
         ) : null}
-        <Button disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? 'Sending...' : 'Send reset code'}
-        </Button>
-        <Button asChild variant="secondary">
-          <Link to="/reset-password">Enter reset code</Link>
-        </Button>
+
+        <div className="space-y-3">
+          <Button className="w-full" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? 'Sending…' : 'Send reset code'}
+          </Button>
+          <Button asChild variant="secondary" className="w-full">
+            <Link to="/reset-password">Already have a code</Link>
+          </Button>
+        </div>
       </form>
     </AuthPanel>
   );
@@ -102,45 +143,52 @@ export function ResetPasswordPage() {
   });
 
   async function onSubmit(values: ResetPasswordFormValues) {
-    await resetPassword(values);
-    form.reset({ email: values.email, otp: '', newPassword: '', confirmPassword: '' });
-    form.setError('root', { message: 'Password reset successfully. You can sign in now.' });
+    try {
+      await resetPassword(values);
+      form.reset({ email: values.email, otp: '', newPassword: '', confirmPassword: '' });
+      form.setError('root', { type: 'success', message: 'Password reset successfully. You can sign in now.' });
+    } catch (err) {
+      if (err instanceof ApiError && err.tier === 'screen') {
+        form.setError('root', { type: 'error', message: err.message });
+      }
+    }
   }
 
   return (
     <AuthPanel
-      icon={<KeyRound size={21} />}
+      icon={<KeyRound size={19} />}
       title="Set new password"
       description="Use the reset code sent to your email."
     >
-      <form className="grid gap-4" onSubmit={form.handleSubmit(onSubmit)}>
-        <div>
-          <Label htmlFor="email">Email</Label>
+      <form className="space-y-7" onSubmit={form.handleSubmit(onSubmit)}>
+        <FieldGroup label="Email">
           <Input id="email" type="email" autoComplete="email" {...form.register('email')} />
           <FieldError message={form.formState.errors.email?.message} />
-        </div>
-        <div>
-          <Label htmlFor="otp">Reset code</Label>
-          <Input id="otp" inputMode="numeric" autoComplete="one-time-code" {...form.register('otp')} />
+        </FieldGroup>
+
+        <FieldGroup label="Reset code">
+          <Input id="otp" inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit code" {...form.register('otp')} />
           <FieldError message={form.formState.errors.otp?.message} />
-        </div>
-        <div>
-          <Label htmlFor="newPassword">New password</Label>
-          <Input id="newPassword" type="password" autoComplete="new-password" {...form.register('newPassword')} />
+        </FieldGroup>
+
+        <FieldGroup label="New password">
+          <Input id="newPassword" type="password" autoComplete="new-password" placeholder="••••••••" {...form.register('newPassword')} />
           <FieldError message={form.formState.errors.newPassword?.message} />
-        </div>
-        <div>
-          <Label htmlFor="confirmPassword">Confirm password</Label>
-          <Input id="confirmPassword" type="password" autoComplete="new-password" {...form.register('confirmPassword')} />
+        </FieldGroup>
+
+        <FieldGroup label="Confirm password">
+          <Input id="confirmPassword" type="password" autoComplete="new-password" placeholder="••••••••" {...form.register('confirmPassword')} />
           <FieldError message={form.formState.errors.confirmPassword?.message} />
-        </div>
+        </FieldGroup>
+
         {form.formState.errors.root?.message ? (
-          <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+          <p className={`rounded-lg px-3 py-2.5 text-sm ${form.formState.errors.root.type === 'error' ? 'bg-error-container text-error' : 'bg-[#e8f5e9] text-[#2e7d32]'}`}>
             {form.formState.errors.root.message}
           </p>
         ) : null}
-        <Button disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? 'Updating...' : 'Update password'}
+
+        <Button className="w-full" disabled={form.formState.isSubmitting}>
+          {form.formState.isSubmitting ? 'Updating…' : 'Update password'}
         </Button>
       </form>
     </AuthPanel>
@@ -155,8 +203,14 @@ export function VerifyEmailPage() {
   });
 
   async function onSubmit(values: OtpFormValues) {
-    await verifyEmail(values);
-    form.setError('root', { message: 'Email verified successfully.' });
+    try {
+      await verifyEmail(values);
+      form.setError('root', { type: 'success', message: 'Email verified successfully.' });
+    } catch (err) {
+      if (err instanceof ApiError && err.tier === 'screen') {
+        form.setError('root', { type: 'error', message: err.message });
+      }
+    }
   }
 
   async function handleResend() {
@@ -166,38 +220,47 @@ export function VerifyEmailPage() {
       form.setError('email', { message: 'Use a valid email address.' });
       return;
     }
-    await resendVerification({ email });
-    form.setError('root', { message: 'A new verification code has been sent.' });
+    try {
+      await resendVerification({ email });
+      form.setError('root', { type: 'success', message: 'A new verification code has been sent.' });
+    } catch (err) {
+      if (err instanceof ApiError && err.tier === 'screen') {
+        form.setError('root', { type: 'error', message: err.message });
+      }
+    }
   }
 
   return (
     <AuthPanel
-      icon={<MailCheck size={21} />}
+      icon={<MailCheck size={19} />}
       title="Verify email"
-      description="Confirm the account email with the 6 digit code."
+      description="Confirm the account email with the 6-digit code."
     >
-      <form className="grid gap-4" onSubmit={form.handleSubmit(onSubmit)}>
-        <div>
-          <Label htmlFor="email">Email</Label>
+      <form className="space-y-7" onSubmit={form.handleSubmit(onSubmit)}>
+        <FieldGroup label="Email">
           <Input id="email" type="email" autoComplete="email" {...form.register('email')} />
           <FieldError message={form.formState.errors.email?.message} />
-        </div>
-        <div>
-          <Label htmlFor="otp">Verification code</Label>
-          <Input id="otp" inputMode="numeric" autoComplete="one-time-code" {...form.register('otp')} />
+        </FieldGroup>
+
+        <FieldGroup label="Verification code">
+          <Input id="otp" inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit code" {...form.register('otp')} />
           <FieldError message={form.formState.errors.otp?.message} />
-        </div>
+        </FieldGroup>
+
         {form.formState.errors.root?.message ? (
-          <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+          <p className={`rounded-lg px-3 py-2.5 text-sm ${form.formState.errors.root.type === 'error' ? 'bg-error-container text-error' : 'bg-[#e8f5e9] text-[#2e7d32]'}`}>
             {form.formState.errors.root.message}
           </p>
         ) : null}
-        <Button disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? 'Verifying...' : 'Verify email'}
-        </Button>
-        <Button type="button" variant="secondary" onClick={() => void handleResend()}>
-          Resend code
-        </Button>
+
+        <div className="space-y-3">
+          <Button className="w-full" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? 'Verifying…' : 'Verify email'}
+          </Button>
+          <Button type="button" variant="secondary" className="w-full" onClick={() => void handleResend()}>
+            Resend code
+          </Button>
+        </div>
       </form>
     </AuthPanel>
   );

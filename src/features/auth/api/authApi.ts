@@ -4,11 +4,20 @@ import type {
   AuthRequestDto,
   AuthResponseDto,
   ForgotPasswordRequestDto,
+  RegisterRequestDto,
   ResendVerificationRequestDto,
   ResetPasswordRequestDto,
   UserRole,
   VerifyEmailRequestDto,
 } from '../types';
+
+export function register(body: RegisterRequestDto) {
+  return apiClient<string>({
+    method: 'POST',
+    url: '/User/register',
+    data: body,
+  });
+}
 
 export function login(role: Exclude<UserRole, 'Explorer'>, body: AuthRequestDto) {
   void role;

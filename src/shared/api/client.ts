@@ -2,6 +2,7 @@ import axios, { isAxiosError, type AxiosRequestConfig } from 'axios';
 import { env } from '@/config/env';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { refreshTokens } from '@/features/auth/api/authApi';
+import { useToastStore } from '@/shared/stores/toastStore';
 import { ApiError, ApiValidationError, resolveErrorCode } from './errors';
 import type { ApiResponse, ValidationErrorResponse } from './types';
 
@@ -60,6 +61,12 @@ axiosInstance.interceptors.response.use(
   },
 );
 
+function maybeToast(err: ApiError) {
+  if (err.tier === 'toast') {
+    useToastStore.getState().add({ message: err.message, variant: 'error' });
+  }
+}
+
 export async function apiClient<T>(config: AxiosRequestConfig): Promise<T> {
   try {
     const response = await axiosInstance.request<ApiResponse<T>>(config);
@@ -69,7 +76,9 @@ export async function apiClient<T>(config: AxiosRequestConfig): Promise<T> {
       return body.data;
     }
 
-    throw new ApiError(resolveErrorCode(response.status, body?.errorCode), response.status);
+    const err = new ApiError(resolveErrorCode(response.status, body?.errorCode), response.status);
+    maybeToast(err);
+    throw err;
   } catch (error) {
     if (error instanceof ApiError) throw error;
 
@@ -77,13 +86,25 @@ export async function apiClient<T>(config: AxiosRequestConfig): Promise<T> {
       const status = error.response?.status ?? 0;
       const body = error.response?.data as (ApiResponse<unknown> & ValidationErrorResponse) | undefined;
 
-      if (!error.response) throw new ApiError('NETWORK', 0, error.message);
-      if (body?.errors) throw new ApiValidationError(body.errors);
+      if (!error.response) {
+        const err = new ApiError('NETWORK', 0, error.message);
+        maybeToast(err);
+        throw err;
+      }
+      if (body?.errors) {
+        const err = new ApiValidationError(body.errors);
+        maybeToast(err);
+        throw err;
+      }
 
-      throw new ApiError(resolveErrorCode(status, body?.errorCode), status, error.message);
+      const err = new ApiError(resolveErrorCode(status, body?.errorCode), status, error.message);
+      maybeToast(err);
+      throw err;
     }
 
-    throw new ApiError('NETWORK', 0);
+    const err = new ApiError('NETWORK', 0);
+    maybeToast(err);
+    throw err;
   }
 }
 
@@ -94,9 +115,17 @@ export async function apiClientNoContent(config: AxiosRequestConfig): Promise<vo
     if (isAxiosError(error)) {
       const status = error.response?.status ?? 0;
       const body = error.response?.data as ApiResponse<unknown> | undefined;
-      if (!error.response) throw new ApiError('NETWORK', 0, error.message);
-      throw new ApiError(resolveErrorCode(status, body?.errorCode), status, error.message);
+      if (!error.response) {
+        const err = new ApiError('NETWORK', 0, error.message);
+        maybeToast(err);
+        throw err;
+      }
+      const err = new ApiError(resolveErrorCode(status, body?.errorCode), status, error.message);
+      maybeToast(err);
+      throw err;
     }
-    throw new ApiError('NETWORK', 0);
+    const err = new ApiError('NETWORK', 0);
+    maybeToast(err);
+    throw err;
   }
 }

@@ -1,5 +1,7 @@
 import type { SessionUser, UserRole } from '../types';
 
+const emailVerifiedClaimKeys = ['email_verified', 'emailVerified', 'EmailConfirmed'];
+
 const roleClaimKeys = [
   'role',
   'roles',
@@ -35,6 +37,13 @@ function findClaim(payload: Record<string, unknown>, keys: string[]) {
   return keys.map((key) => payload[key]).find((value) => typeof value === 'string' || Array.isArray(value));
 }
 
+function parseEmailConfirmed(payload: Record<string, unknown>): boolean | undefined {
+  const raw = emailVerifiedClaimKeys.map((k) => payload[k]).find((v) => v !== undefined);
+  if (raw === true || raw === 'True' || raw === 'true') return true;
+  if (raw === false || raw === 'False' || raw === 'false') return false;
+  return undefined;
+}
+
 export function parseJwtUser(accessToken: string): SessionUser {
   const payload = JSON.parse(base64UrlDecode(accessToken.split('.')[1] ?? 'e30=')) as Record<string, unknown>;
 
@@ -42,5 +51,6 @@ export function parseJwtUser(accessToken: string): SessionUser {
     id: String(findClaim(payload, idClaimKeys) ?? ''),
     email: String(findClaim(payload, emailClaimKeys) ?? ''),
     role: asRole(findClaim(payload, roleClaimKeys)),
+    emailConfirmed: parseEmailConfirmed(payload),
   };
 }

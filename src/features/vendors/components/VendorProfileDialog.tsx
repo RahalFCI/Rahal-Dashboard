@@ -17,6 +17,8 @@ const weekdays: Weekday[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursd
 interface VendorProfileDialogProps {
   open: boolean;
   profile?: VendorProfileDto;
+  userId?: string;
+  title?: string;
   categories: GetPlaceCategoryDto[];
   isLoading: boolean;
   onOpenChange: (open: boolean) => void;
@@ -26,6 +28,8 @@ interface VendorProfileDialogProps {
 export function VendorProfileDialog({
   open,
   profile,
+  userId,
+  title = 'Edit vendor profile',
   categories,
   isLoading,
   onOpenChange,
@@ -57,8 +61,10 @@ export function VendorProfileDialog({
         categoryId: profile.categoryId,
         workingHours: formatWorkingHours(profile.workingHours),
       });
+    } else if (userId) {
+      form.setValue('userId', userId);
     }
-  }, [form, profile]);
+  }, [form, profile, userId]);
 
   async function handleSubmit(values: VendorProfileFormValues) {
     const file = (document.getElementById('vendorProfilePicture') as HTMLInputElement | null)?.files?.[0] ?? null;
@@ -79,7 +85,7 @@ export function VendorProfileDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} title="Edit vendor profile" description="Business profile details and approval metadata.">
+    <Dialog open={open} onOpenChange={onOpenChange} title={title} description="Business profile details and approval metadata.">
       {isLoading ? (
         <p className="text-sm text-on-surface-variant">Loading profile...</p>
       ) : (
@@ -132,7 +138,7 @@ export function VendorProfileDialog({
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button disabled={form.formState.isSubmitting}>Save profile</Button>
+            <Button disabled={form.formState.isSubmitting}>{profile ? 'Save profile' : 'Create profile'}</Button>
           </div>
         </form>
       )}
