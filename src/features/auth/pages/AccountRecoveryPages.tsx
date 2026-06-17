@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Archive, KeyRound, MailCheck } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
 import { FieldError } from '@/shared/components/ui/field-error';
 import { Input } from '@/shared/components/ui/input';
@@ -197,6 +197,7 @@ export function ResetPasswordPage() {
 
 export function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const form = useForm<OtpFormValues>({
     resolver: zodResolver(otpSchema),
     defaultValues: { email: searchParams.get('email') ?? '', otp: '' },
@@ -205,7 +206,11 @@ export function VerifyEmailPage() {
   async function onSubmit(values: OtpFormValues) {
     try {
       await verifyEmail(values);
-      form.setError('root', { type: 'success', message: 'Email verified successfully.' });
+      form.setError('root', {
+        type: 'success',
+        message: 'Email verified. Redirecting you to sign in…',
+      });
+      setTimeout(() => navigate('/login', { replace: true }), 1500);
     } catch (err) {
       if (err instanceof ApiError && err.tier === 'screen') {
         form.setError('root', { type: 'error', message: err.message });

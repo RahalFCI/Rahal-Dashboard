@@ -33,8 +33,11 @@ export const resetPasswordSchema = otpSchema
 
 export const registerSchema = z
   .object({
-    displayName: z.string().min(2, 'Enter your full name.'),
+    displayName: z.string().min(3, 'Enter your full name (at least 3 characters).').max(100, 'Name is too long.'),
     email: z.string().email('Use a valid email address.'),
+    phoneNumber: z
+      .string()
+      .regex(/^\+?[1-9]\d{1,14}$/, 'Enter a valid phone number in international format (e.g. +201234567890).'),
     password: z
       .string()
       .min(8, 'Password must be at least 8 characters.')

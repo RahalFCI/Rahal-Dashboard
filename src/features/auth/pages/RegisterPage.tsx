@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
 import { FieldError } from '@/shared/components/ui/field-error';
 import { Input } from '@/shared/components/ui/input';
+import { ApiError } from '@/shared/api/errors';
 import { register } from '../api/authApi';
 import { registerSchema, type RegisterFormValues } from '../schemas';
 
@@ -14,12 +15,25 @@ export function RegisterPage() {
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { displayName: '', email: '', password: '', confirmPassword: '' },
+    defaultValues: { displayName: '', email: '', phoneNumber: '', password: '', confirmPassword: '' },
   });
 
   async function onSubmit(values: RegisterFormValues) {
-    await register({ displayName: values.displayName, email: values.email, password: values.password });
-    setRegistered(values.email);
+    try {
+      await register({
+        name: values.displayName,
+        email: values.email,
+        phoneNumber: values.phoneNumber,
+        password: values.password,
+        confirmPassword: values.confirmPassword,
+        userRole: 'Vendor',
+      });
+      setRegistered(values.email);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        form.setError('root', { message: err.message });
+      }
+    }
   }
 
   return (
@@ -113,6 +127,19 @@ export function RegisterPage() {
                   {...form.register('email')}
                 />
                 <FieldError message={form.formState.errors.email?.message} />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                  Phone number
+                </label>
+                <Input
+                  id="phoneNumber"
+                  type="tel"
+                  autoComplete="tel"
+                  placeholder="+201234567890"
+                  {...form.register('phoneNumber')}
+                />
+                <FieldError message={form.formState.errors.phoneNumber?.message} />
               </div>
               <div>
                 <label className="text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">

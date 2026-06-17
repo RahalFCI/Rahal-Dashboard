@@ -38,7 +38,10 @@ export interface SessionUser {
 }
 
 export interface RegisterRequestDto {
-  displayName: string;
+  name: string;
   email: string;
   password: string;
+  confirmPassword: string;
+  phoneNumber: string;
+  userRole: Exclude<UserRole, 'Explorer' | 'Admin'>;
 }

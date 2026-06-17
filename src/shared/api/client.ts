@@ -97,7 +97,9 @@ export async function apiClient<T>(config: AxiosRequestConfig): Promise<T> {
         throw err;
       }
 
-      const err = new ApiError(resolveErrorCode(status, body?.errorCode), status, error.message);
+      // Let ApiError fall back to the human-readable message from errorMap; the
+      // raw axios message (e.g. "Request failed with status code 401") is noise.
+      const err = new ApiError(resolveErrorCode(status, body?.errorCode), status);
       maybeToast(err);
       throw err;
     }
@@ -120,7 +122,7 @@ export async function apiClientNoContent(config: AxiosRequestConfig): Promise<vo
         maybeToast(err);
         throw err;
       }
-      const err = new ApiError(resolveErrorCode(status, body?.errorCode), status, error.message);
+      const err = new ApiError(resolveErrorCode(status, body?.errorCode), status);
       maybeToast(err);
       throw err;
     }
