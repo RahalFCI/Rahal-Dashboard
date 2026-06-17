@@ -1,7 +1,7 @@
 import { apiClient, apiClientNoContent } from '@/shared/api/client';
 import type { PagedResult } from '@/shared/api/types';
 import type { UserRole } from '@/features/auth/types';
-import type { AccountUserDto, ManageableRole, UpdatePasswordDto, UserDto, UserSummaryDto } from '../types';
+import type { AccountUserDto, CreateUserDto, ManageableRole, UpdatePasswordDto, UserDto, UserSummaryDto } from '../types';
 
 export function listUsers(role: ManageableRole, page: number, pageSize: number, includeDeleted: boolean) {
   return apiClient<PagedResult<UserSummaryDto>>({
@@ -37,6 +37,19 @@ function normalizeRole(role: UserSummaryDto['role']): UserRole | undefined {
   if (role === 2) return 'Admin';
   if (role === 'Admin' || role === 'Vendor' || role === 'Explorer') return role;
   return undefined;
+}
+
+// There is no dedicated admin-create endpoint on the backend yet, so this
+// reuses the public /User/register endpoint with an explicit userRole.
+// See DASHBOARD_NOTES.md: that endpoint trusts userRole from the body, which
+// is a known privilege-escalation issue for public registration but is what
+// lets an authenticated admin mint Explorer/Vendor/Admin accounts here.
+export function createUser(body: CreateUserDto) {
+  return apiClient<string>({
+    method: 'POST',
+    url: '/User/register',
+    data: body,
+  });
 }
 
 export function getUser(_role: ManageableRole, id: string) {

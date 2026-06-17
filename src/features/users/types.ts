@@ -72,3 +72,12 @@ export interface UpdatePasswordDto {
   newPassword: string;
   confirmPassword: string;
 }
+
+export interface CreateUserDto {
+  name: string;
+  email: string;
+  phoneNumber: string;
+  password: string;
+  confirmPassword: string;
+  userRole: Exclude<UserRole, 'Admin'>;
+}

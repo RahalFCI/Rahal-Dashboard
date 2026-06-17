@@ -4,15 +4,17 @@ import { useState } from 'react';
 import { Button } from '@/shared/components/ui/button';
 import { Panel } from '@/shared/components/ui/panel';
 import { queryClient } from '@/shared/api/queryClient';
+import { ApiError } from '@/shared/api/errors';
+import { useToastStore } from '@/shared/stores/toastStore';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/layout/DataState';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { PaginationBar } from '@/shared/layout/PaginationBar';
 import { cn } from '@/shared/lib/utils';
-import { deleteUser, getUser, listUsers, restoreUser, updateUser, updateUserPassword } from '../api/usersApi';
-import { EditUserDialog, PasswordDialog } from '../components/UserDialogs';
+import { createUser, deleteUser, getUser, listUsers, restoreUser, updateUser, updateUserPassword } from '../api/usersApi';
+import { CreateUserDialog, EditUserDialog, PasswordDialog } from '../components/UserDialogs';
 import { UserTable } from '../components/UserTable';
 import type { ManageableRole, UserDto, UserSummaryDto } from '../types';
-import type { PasswordValues, UserEditValues } from '../schemas';
+import type { CreateUserValues, PasswordValues, UserEditValues } from '../schemas';
 
 const roles: { value: ManageableRole; label: string }[] = [
   { value: 'explorer', label: 'Explorers' },
@@ -25,7 +27,7 @@ export function UserManagementPage() {
   const [page, setPage] = useState(1);
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const [selected, setSelected] = useState<UserSummaryDto | null>(null);
-  const [dialog, setDialog] = useState<'edit' | 'password' | null>(null);
+  const [dialog, setDialog] = useState<'create' | 'edit' | 'password' | null>(null);
 
   const usersQuery = useQuery({
     queryKey: ['users', role, page, includeDeleted],
@@ -39,6 +41,22 @@ export function UserManagementPage() {
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['users'] });
+
+  // toast tier errors are already surfaced globally by the api client; this
+  // covers "screen" tier errors for actions with no form to attach them to.
+  function toastOnError(error: unknown) {
+    if (error instanceof ApiError) {
+      useToastStore.getState().add({ message: error.message, variant: 'error' });
+    }
+  }
+
+  const createMutation = useMutation({
+    mutationFn: (values: CreateUserValues) => createUser(values),
+    onSuccess: () => {
+      setDialog(null);
+      void invalidate();
+    },
+  });
 
   const updateMutation = useMutation({
     mutationFn: (values: UserEditValues) => updateUser(role, { ...(detailQuery.data as UserDto), ...values } as UserDto),
@@ -56,11 +74,13 @@ export function UserManagementPage() {
   const deleteMutation = useMutation({
     mutationFn: (user: UserSummaryDto) => deleteUser(role, user.id),
     onSuccess: () => void invalidate(),
+    onError: toastOnError,
   });
 
   const restoreMutation = useMutation({
     mutationFn: (user: UserSummaryDto) => restoreUser(role, user.id),
     onSuccess: () => void invalidate(),
+    onError: toastOnError,
   });
 
   function changeRole(nextRole: string) {
@@ -77,9 +97,16 @@ export function UserManagementPage() {
         title="User management"
         description="Role-specific user records, soft deletion, restore flow, and profile maintenance."
         actions={
-          <Button type="button" variant={includeDeleted ? 'secondary' : 'ghost'} onClick={() => setIncludeDeleted((value) => !value)}>
-            {includeDeleted ? 'Viewing deleted' : 'Include deleted'}
-          </Button>
+          <div className="flex gap-2">
+            {role !== 'admin' ? (
+              <Button type="button" onClick={() => setDialog('create')}>
+                Create account
+              </Button>
+            ) : null}
+            <Button type="button" variant={includeDeleted ? 'secondary' : 'ghost'} onClick={() => setIncludeDeleted((value) => !value)}>
+              {includeDeleted ? 'Viewing deleted' : 'Include deleted'}
+            </Button>
+          </div>
         }
       />
 
@@ -125,6 +152,14 @@ export function UserManagementPage() {
         </Panel>
       ) : null}
 
+      {role !== 'admin' ? (
+        <CreateUserDialog
+          open={dialog === 'create'}
+          defaultRole={role}
+          onOpenChange={(open) => setDialog(open ? 'create' : null)}
+          onSubmit={(values) => createMutation.mutateAsync(values)}
+        />
+      ) : null}
       <EditUserDialog
         open={dialog === 'edit'}
         user={detailQuery.data}

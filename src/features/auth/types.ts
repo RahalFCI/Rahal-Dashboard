@@ -43,5 +43,5 @@ export interface RegisterRequestDto {
   password: string;
   confirmPassword: string;
   phoneNumber: string;
-  userRole: Exclude<UserRole, 'Explorer' | 'Admin'>;
+  userRole: Exclude<UserRole, 'Admin'>;
 }
