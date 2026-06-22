@@ -3,6 +3,14 @@ import type { PagedResult } from '@/shared/api/types';
 import type { UserRole } from '@/features/auth/types';
 import type { AccountUserDto, CreateUserDto, ManageableRole, UpdatePasswordDto, UserDto, UserSummaryDto } from '../types';
 
+export function listAllUsers(page: number, pageSize: number) {
+  return apiClient<PagedResult<UserSummaryDto>>({
+    method: 'GET',
+    url: '/User',
+    params: { page, pageSize },
+  });
+}
+
 export function listUsers(role: ManageableRole, page: number, pageSize: number, includeDeleted: boolean) {
   return apiClient<PagedResult<UserSummaryDto>>({
     method: 'GET',

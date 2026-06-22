@@ -11,14 +11,15 @@ import type { UserSummaryDto } from '../types';
 
 interface UserTableProps {
   users: UserSummaryDto[];
-  onEdit: (user: UserSummaryDto) => void;
-  onPassword: (user: UserSummaryDto) => void;
-  onDelete: (user: UserSummaryDto) => void;
-  onRestore: (user: UserSummaryDto) => void;
-  includeDeleted: boolean;
+  onEdit?: (user: UserSummaryDto) => void;
+  onPassword?: (user: UserSummaryDto) => void;
+  onDelete?: (user: UserSummaryDto) => void;
+  onRestore?: (user: UserSummaryDto) => void;
+  includeDeleted?: boolean;
 }
 
-export function UserTable({ users, onEdit, onPassword, onDelete, onRestore, includeDeleted }: UserTableProps) {
+export function UserTable({ users, onEdit, onPassword, onDelete, onRestore, includeDeleted = false }: UserTableProps) {
+  const hasActions = Boolean(onEdit || onPassword || onDelete || onRestore);
   const columns: ColumnDef<UserSummaryDto>[] = [
     {
       header: 'Name',
@@ -47,31 +48,37 @@ export function UserTable({ users, onEdit, onPassword, onDelete, onRestore, incl
     {
       id: 'actions',
       header: '',
-      cell: ({ row }) => (
-        <div className="flex justify-end gap-1">
-          <Button type="button" variant="ghost" size="icon" aria-label="Edit user" onClick={() => onEdit(row.original)}>
-            <Edit size={16} />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label="Update password"
-            onClick={() => onPassword(row.original)}
-          >
-            <KeyRound size={16} />
-          </Button>
-          {includeDeleted ? (
-            <Button type="button" variant="ghost" size="icon" aria-label="Restore user" onClick={() => onRestore(row.original)}>
-              <RotateCcw size={16} />
-            </Button>
-          ) : (
-            <Button type="button" variant="ghost" size="icon" aria-label="Delete user" onClick={() => onDelete(row.original)}>
-              <Trash2 size={16} />
-            </Button>
-          )}
-        </div>
-      ),
+      cell: ({ row }) =>
+        hasActions ? (
+          <div className="flex justify-end gap-1">
+            {onEdit ? (
+              <Button type="button" variant="ghost" size="icon" aria-label="Edit user" onClick={() => onEdit(row.original)}>
+                <Edit size={16} />
+              </Button>
+            ) : null}
+            {onPassword ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Update password"
+                onClick={() => onPassword(row.original)}
+              >
+                <KeyRound size={16} />
+              </Button>
+            ) : null}
+            {includeDeleted && onRestore ? (
+              <Button type="button" variant="ghost" size="icon" aria-label="Restore user" onClick={() => onRestore(row.original)}>
+                <RotateCcw size={16} />
+              </Button>
+            ) : null}
+            {!includeDeleted && onDelete ? (
+              <Button type="button" variant="ghost" size="icon" aria-label="Delete user" onClick={() => onDelete(row.original)}>
+                <Trash2 size={16} />
+              </Button>
+            ) : null}
+          </div>
+        ) : null,
     },
   ];
 

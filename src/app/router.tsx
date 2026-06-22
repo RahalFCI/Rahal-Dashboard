@@ -2,8 +2,15 @@ import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage } from '@/features/auth/pages/AccountRecoveryPages';
 import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { RegisterPage } from '@/features/auth/pages/RegisterPage';
-import { CategoriesPage } from '@/features/places/pages/CategoriesPage';
+import { AchievementsPage } from '@/features/achievements/pages/AchievementsPage';
+import { BadgesPage } from '@/features/badges/pages/BadgesPage';
+import { ChallengesPage } from '@/features/challenges/pages/ChallengesPage';
+import { CheckInChallengesPage } from '@/features/checkInChallenges/pages/CheckInChallengesPage';
+import { CheckInsPage } from '@/features/checkIns/pages/CheckInsPage';
+import { ExplorerAchievementsPage } from '@/features/explorerAchievements/pages/ExplorerAchievementsPage';
 import { PlacesPage } from '@/features/places/pages/PlacesPage';
+import { SearchPage } from '@/features/search/pages/SearchPage';
+import { UserStatsPage } from '@/features/userStats/pages/UserStatsPage';
 import { VendorDashboardPage } from '@/features/vendors/pages/VendorDashboardPage';
 import { VendorPlaceDetailPage } from '@/features/vendors/pages/VendorPlaceDetailPage';
 import { VendorPlacesPage } from '@/features/vendors/pages/VendorPlacesPage';
@@ -53,10 +60,66 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: 'admin/categories',
+        path: 'admin/search',
         element: (
           <RequireAuth roles={['Admin']}>
-            <CategoriesPage />
+            <SearchPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'admin/user-stats',
+        element: (
+          <RequireAuth roles={['Admin']}>
+            <UserStatsPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'admin/explorer-achievements',
+        element: (
+          <RequireAuth roles={['Admin']}>
+            <ExplorerAchievementsPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'admin/badges',
+        element: (
+          <RequireAuth roles={['Admin']}>
+            <BadgesPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'admin/achievements',
+        element: (
+          <RequireAuth roles={['Admin']}>
+            <AchievementsPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'admin/check-ins',
+        element: (
+          <RequireAuth roles={['Admin']}>
+            <CheckInsPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'admin/check-in-challenges',
+        element: (
+          <RequireAuth roles={['Admin']}>
+            <CheckInChallengesPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'admin/challenges',
+        element: (
+          <RequireAuth roles={['Admin']}>
+            <ChallengesPage />
           </RequireAuth>
         ),
       },

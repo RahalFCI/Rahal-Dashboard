@@ -27,6 +27,20 @@ export function Toaster() {
           )}
         >
           <Toast.Description className="leading-snug">{toast.message}</Toast.Description>
+          {toast.action ? (
+            <Toast.Action asChild altText={toast.action.label}>
+              <button
+                type="button"
+                className="shrink-0 rounded px-2 py-1 text-xs font-semibold underline-offset-2 hover:underline"
+                onClick={() => {
+                  toast.action!.onClick();
+                  remove(toast.id);
+                }}
+              >
+                {toast.action.label}
+              </button>
+            </Toast.Action>
+          ) : null}
           <Toast.Close className="shrink-0 rounded opacity-60 hover:opacity-100">
             <X size={14} />
           </Toast.Close>

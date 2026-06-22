@@ -12,3 +12,9 @@ export const vendorProfileSchema = z.object({
 });
 
 export type VendorProfileFormValues = z.infer<typeof vendorProfileSchema>;
+
+export const vendorCategorySchema = z.object({
+  name: z.string().min(2, 'Category name is required.'),
+});
+
+export type VendorCategoryFormValues = z.infer<typeof vendorCategorySchema>;

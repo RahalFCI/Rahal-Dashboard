@@ -31,3 +31,8 @@ export interface UpsertVendorProfileDto {
   workingHours: WorkingHours;
   categoryId: string;
 }
+
+export interface VendorCategoryDto {
+  id: string;
+  name: string;
+}
