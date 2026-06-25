@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import * as Tabs from '@radix-ui/react-tabs';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { paginateClientSide } from '@/features/search/lib/clientSearch';
 import { Button } from '@/shared/components/ui/button';
 import { Panel } from '@/shared/components/ui/panel';
 import { queryClient } from '@/shared/api/queryClient';
@@ -22,6 +23,8 @@ const roles: { value: ManageableRole; label: string }[] = [
   { value: 'admin', label: 'Admins' },
 ];
 
+const FETCH_ALL_PAGE_SIZE = 500;
+
 export function UserManagementPage() {
   const [role, setRole] = useState<ManageableRole>('explorer');
   const [page, setPage] = useState(1);
@@ -29,10 +32,55 @@ export function UserManagementPage() {
   const [selected, setSelected] = useState<UserSummaryDto | null>(null);
   const [dialog, setDialog] = useState<'create' | 'edit' | 'password' | null>(null);
 
+  // Normal (active-only) view: server-paginated as before.
   const usersQuery = useQuery({
-    queryKey: ['users', role, page, includeDeleted],
-    queryFn: () => listUsers(role, page, 10, includeDeleted),
+    queryKey: ['users', role, page],
+    queryFn: () => listUsers(role, page, 10, false),
+    enabled: !includeDeleted,
   });
+
+  // "Include deleted" view: the *-include-deleted endpoints return active and
+  // deleted users mixed together with no isDeleted flag on either side, so
+  // there's no way to tell them apart - or to show deleted-only - from that
+  // response alone. Fetch everything from both endpoints once, cross-reference
+  // by id to find the ones that are actually deleted, then paginate that
+  // deleted-only set client-side so a restored row drops out of view (and out
+  // of the page count) immediately instead of lingering until the next full
+  // refetch lines up with the current page.
+  const allIncludingDeletedQuery = useQuery({
+    queryKey: ['users', role, 'all-including-deleted'],
+    queryFn: () => listUsers(role, 1, FETCH_ALL_PAGE_SIZE, true),
+    enabled: includeDeleted,
+  });
+
+  const activeUsersQuery = useQuery({
+    queryKey: ['users', role, 'active-for-deleted-check'],
+    queryFn: () => listUsers(role, 1, FETCH_ALL_PAGE_SIZE, false),
+    enabled: includeDeleted,
+  });
+
+  const deletedOnlyResult = useMemo(() => {
+    const activeIds = new Set((activeUsersQuery.data?.items ?? []).map((user) => user.id));
+    const deletedOnly = (allIncludingDeletedQuery.data?.items ?? [])
+      .filter((user) => !activeIds.has(user.id))
+      .map((user) => ({ ...user, isDeleted: true }));
+    return paginateClientSide(deletedOnly, page, 10);
+  }, [allIncludingDeletedQuery.data, activeUsersQuery.data, page]);
+
+  const isDeletedViewLoading = allIncludingDeletedQuery.isLoading || activeUsersQuery.isLoading;
+  const isDeletedViewError = allIncludingDeletedQuery.isError || activeUsersQuery.isError;
+  const result = includeDeleted ? deletedOnlyResult : usersQuery.data;
+  const isLoading = includeDeleted ? isDeletedViewLoading : usersQuery.isLoading;
+  const isError = includeDeleted ? isDeletedViewError : usersQuery.isError;
+
+  function refetchCurrentView() {
+    if (includeDeleted) {
+      void allIncludingDeletedQuery.refetch();
+      void activeUsersQuery.refetch();
+    } else {
+      void usersQuery.refetch();
+    }
+  }
 
   const detailQuery = useQuery({
     queryKey: ['users', role, selected?.id],
@@ -103,8 +151,15 @@ export function UserManagementPage() {
                 Create account
               </Button>
             ) : null}
-            <Button type="button" variant={includeDeleted ? 'secondary' : 'ghost'} onClick={() => setIncludeDeleted((value) => !value)}>
-              {includeDeleted ? 'Viewing deleted' : 'Include deleted'}
+            <Button
+              type="button"
+              variant={includeDeleted ? 'secondary' : 'ghost'}
+              onClick={() => {
+                setIncludeDeleted((value) => !value);
+                setPage(1);
+              }}
+            >
+              {includeDeleted ? 'Viewing deleted' : 'View deleted'}
             </Button>
           </div>
         }
@@ -127,16 +182,18 @@ export function UserManagementPage() {
         </Tabs.List>
       </Tabs.Root>
 
-      {usersQuery.isLoading ? <LoadingState /> : null}
-      {usersQuery.isError ? <ErrorState onRetry={() => void usersQuery.refetch()} /> : null}
-      {usersQuery.data && usersQuery.data.items.length === 0 ? (
-        <EmptyState title="No users found" description="This role has no records in the selected view." />
+      {isLoading ? <LoadingState /> : null}
+      {isError ? <ErrorState onRetry={refetchCurrentView} /> : null}
+      {!isLoading && !isError && result && result.items.length === 0 ? (
+        <EmptyState
+          title={includeDeleted ? 'No deleted users' : 'No users found'}
+          description={includeDeleted ? 'No deleted records for this role right now.' : 'This role has no records in the selected view.'}
+        />
       ) : null}
-      {usersQuery.data && usersQuery.data.items.length > 0 ? (
+      {!isLoading && !isError && result && result.items.length > 0 ? (
         <Panel className="overflow-hidden">
           <UserTable
-            users={usersQuery.data.items}
-            includeDeleted={includeDeleted}
+            users={result.items}
             onEdit={(user) => {
               setSelected(user);
               setDialog('edit');
@@ -148,7 +205,7 @@ export function UserManagementPage() {
             onDelete={(user) => void deleteMutation.mutate(user)}
             onRestore={(user) => void restoreMutation.mutate(user)}
           />
-          <PaginationBar page={page} result={usersQuery.data} onPageChange={setPage} />
+          <PaginationBar page={page} result={result} onPageChange={setPage} />
         </Panel>
       ) : null}
 

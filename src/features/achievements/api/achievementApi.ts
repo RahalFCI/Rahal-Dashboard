@@ -86,6 +86,17 @@ export function updateCriteriaType(id: string, values: CriteriaTypeFormValues) {
   });
 }
 
+// Confirmed permanently non-functional against the live backend (tested
+// twice): the handler only matches rows where IsDeleted is already true
+// (`.Where(a => a.Id == id && a.IsDeleted)`), but nothing in this resource's
+// API ever sets IsDeleted - there's no soft-delete step at all for criteria
+// types, unlike Badge/Achievement. This will 404 on every currently-active
+// row, with no workaround. Kept here as the literal binding for this
+// endpoint at the user's request; not fixable from the frontend.
+export function deleteCriteriaType(id: string) {
+  return apiClient<string>({ method: 'DELETE', url: `/AchievementCriteriaType/${id}` });
+}
+
 // Soft delete - sets IsDeleted/DeletedAt server-side, so the row disappears
 // from listAchievements (which filters !IsDeleted) once this succeeds.
 export function deleteAchievement(id: string) {

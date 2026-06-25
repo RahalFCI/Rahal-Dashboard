@@ -11,6 +11,24 @@ export function listAllUsers(page: number, pageSize: number) {
   });
 }
 
+// GetAllAdminsAsync (this route) and its explorers/vendors siblings all
+// delegate to the exact same _userService.GetAllUsers(...) call as the plain
+// GET /User endpoint - none of them actually filter by role despite their
+// route names. Verified by reading UserController.cs: GetAllAdminsAsync,
+// GetAllExplorersAsync, and GetAllVendorsAsync share one identical body. This
+// returns every user regardless of role, not admins-only - kept here as the
+// literal binding for this endpoint, but NOT used by listUsers()/the Admins
+// tab below, which needs real per-role filtering and gets it via the
+// client-side filterRolePage() workaround against the generic /User list
+// instead.
+export function listAdmins(page: number, pageSize: number) {
+  return apiClient<PagedResult<UserSummaryDto>>({
+    method: 'GET',
+    url: '/User/admins',
+    params: { page, pageSize },
+  });
+}
+
 export function listUsers(role: ManageableRole, page: number, pageSize: number, includeDeleted: boolean) {
   return apiClient<PagedResult<UserSummaryDto>>({
     method: 'GET',

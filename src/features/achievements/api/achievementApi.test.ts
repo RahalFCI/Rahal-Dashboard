@@ -4,6 +4,7 @@ import {
   createAchievement,
   createCriteriaType,
   deleteAchievement,
+  deleteCriteriaType,
   getAchievementById,
   getCriteriaTypeById,
   getCriteriaTypeByName,
@@ -488,5 +489,35 @@ describe('achievementApi', () => {
     });
 
     await expect(getCriteriaTypeByName('Nonexistent')).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  it('calls DELETE /AchievementCriteriaType/{id} with the right shape', async () => {
+    const request = vi.spyOn(axiosInstance, 'request').mockResolvedValue({
+      data: { isSuccess: true, data: 'Achievement criteria type deleted successfully', errorCode: 'None' },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {},
+    });
+
+    await deleteCriteriaType('criteria-1');
+
+    expect(request).toHaveBeenCalledWith({ method: 'DELETE', url: '/AchievementCriteriaType/criteria-1' });
+  });
+
+  // This is the REAL, confirmed-live behavior for every currently-active
+  // criteria type, not an edge case: the backend handler only matches rows
+  // where IsDeleted is already true, and nothing in this resource's API ever
+  // sets that flag. See the comment on deleteCriteriaType.
+  it('throws a NOT_FOUND ApiError when deleting any currently-active criteria type', async () => {
+    vi.spyOn(axiosInstance, 'request').mockResolvedValue({
+      data: { isSuccess: false, data: null, errorCode: 'NotFound' },
+      status: 404,
+      statusText: 'Not Found',
+      headers: {},
+      config: {},
+    });
+
+    await expect(deleteCriteriaType('any-active-criteria-type-id')).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 });

@@ -23,6 +23,7 @@ import {
   createAchievement,
   createCriteriaType,
   deleteAchievement,
+  deleteCriteriaType,
   listAchievements,
   listCriteriaTypes,
   restoreAchievement,
@@ -117,6 +118,15 @@ export function AchievementsPage() {
       setSelectedCriteriaType(null);
       void queryClient.invalidateQueries({ queryKey: ['achievement-criteria-types'] });
     },
+  });
+
+  // Confirmed permanently broken against the live backend - see the comment
+  // on deleteCriteriaType in achievementApi.ts. This will always fail with a
+  // NotFound toast; that is the real backend behavior, not a frontend bug.
+  const deleteCriteriaTypeMutation = useMutation({
+    mutationFn: (id: string) => deleteCriteriaType(id),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['achievement-criteria-types'] }),
+    onError: toastOnError,
   });
 
   return (
@@ -293,6 +303,15 @@ export function AchievementsPage() {
                             }}
                           >
                             <Edit size={16} />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Delete criteria type"
+                            onClick={() => void deleteCriteriaTypeMutation.mutate(criteriaType.id)}
+                          >
+                            <Trash2 size={16} />
                           </Button>
                         </div>
                       </td>

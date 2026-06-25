@@ -15,10 +15,9 @@ interface UserTableProps {
   onPassword?: (user: UserSummaryDto) => void;
   onDelete?: (user: UserSummaryDto) => void;
   onRestore?: (user: UserSummaryDto) => void;
-  includeDeleted?: boolean;
 }
 
-export function UserTable({ users, onEdit, onPassword, onDelete, onRestore, includeDeleted = false }: UserTableProps) {
+export function UserTable({ users, onEdit, onPassword, onDelete, onRestore }: UserTableProps) {
   const hasActions = Boolean(onEdit || onPassword || onDelete || onRestore);
   const columns: ColumnDef<UserSummaryDto>[] = [
     {
@@ -40,6 +39,7 @@ export function UserTable({ users, onEdit, onPassword, onDelete, onRestore, incl
       header: 'Status',
       cell: ({ row }) => {
         const user = row.original;
+        if (user.isDeleted) return <Badge className="bg-red-100 text-red-700">Deleted</Badge>;
         if ('isApproved' in user) return <Badge className={user.isApproved ? 'bg-green-100 text-green-700' : ''}>{user.isApproved ? 'Approved' : 'Pending'}</Badge>;
         if ('isPremium' in user) return <Badge>{user.isPremium ? 'Premium' : `Level ${user.level}`}</Badge>;
         return <Badge>Active</Badge>;
@@ -67,12 +67,12 @@ export function UserTable({ users, onEdit, onPassword, onDelete, onRestore, incl
                 <KeyRound size={16} />
               </Button>
             ) : null}
-            {includeDeleted && onRestore ? (
+            {row.original.isDeleted && onRestore ? (
               <Button type="button" variant="ghost" size="icon" aria-label="Restore user" onClick={() => onRestore(row.original)}>
                 <RotateCcw size={16} />
               </Button>
             ) : null}
-            {!includeDeleted && onDelete ? (
+            {!row.original.isDeleted && onDelete ? (
               <Button type="button" variant="ghost" size="icon" aria-label="Delete user" onClick={() => onDelete(row.original)}>
                 <Trash2 size={16} />
               </Button>

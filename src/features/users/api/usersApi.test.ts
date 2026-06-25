@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { axiosInstance } from '@/shared/api/client';
-import { deleteUser, getUser, updateUser, updateUserPassword } from './usersApi';
+import { deleteUser, getUser, listAdmins, updateUser, updateUserPassword } from './usersApi';
 
 function mockApiResponse<T>(data: T) {
   return vi.spyOn(axiosInstance, 'request').mockResolvedValue({
@@ -76,5 +76,34 @@ describe('usersApi', () => {
       method: 'DELETE',
       url: '/User/user-1',
     });
+  });
+
+  it('calls GET /User/admins, which (per UserController.cs) returns every user, not just admins', async () => {
+    // GetAllAdminsAsync delegates to the same GetAllUsers() call as the plain
+    // GET /User endpoint, so a non-admin row coming back here is the real,
+    // documented backend behavior - not a mistake in this test.
+    const mixedRolePage = {
+      items: [
+        { id: 'user-1', name: 'Admin', email: 'admin@test.com', phoneNumber: '111', role: 'Admin' },
+        { id: 'user-2', name: 'Some Explorer', email: 'explorer@test.com', phoneNumber: '222', role: 'Explorer' },
+      ],
+      totalCount: 2,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+      hasNextPage: false,
+      hasPreviousPage: false,
+    };
+    const request = mockApiResponse(mixedRolePage);
+
+    const result = await listAdmins(1, 10);
+
+    expect(request).toHaveBeenCalledWith({
+      method: 'GET',
+      url: '/User/admins',
+      params: { page: 1, pageSize: 10 },
+    });
+    expect(result).toEqual(mixedRolePage);
+    expect(result.items.some((user) => user.role !== 'Admin')).toBe(true);
   });
 });
