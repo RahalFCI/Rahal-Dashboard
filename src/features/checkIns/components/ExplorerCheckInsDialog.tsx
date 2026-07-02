@@ -9,6 +9,7 @@ import { getCheckInsByExplorerId } from '../api/checkInApi';
 
 interface ExplorerCheckInsDialogProps {
   explorerId: string | null;
+  explorerName?: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -18,7 +19,7 @@ const statusBadgeClass: Record<string, string> = {
   Failed: 'bg-red-100 text-red-700',
 };
 
-export function ExplorerCheckInsDialog({ explorerId, open, onOpenChange }: ExplorerCheckInsDialogProps) {
+export function ExplorerCheckInsDialog({ explorerId, explorerName, open, onOpenChange }: ExplorerCheckInsDialogProps) {
   const [page, setPage] = useState(1);
 
   // Reset to page 1 whenever a different explorer is opened, without an
@@ -48,7 +49,7 @@ export function ExplorerCheckInsDialog({ explorerId, open, onOpenChange }: Explo
   const placeNameById = new Map((placesQuery.data?.items ?? []).map((place) => [place.id, place.name]));
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} title="Check-ins by this explorer" description={explorerId ?? undefined}>
+    <Dialog open={open} onOpenChange={onOpenChange} title="Check-ins by this explorer" description={explorerName || explorerId || undefined}>
       {checkInsQuery.isLoading ? <LoadingState /> : null}
       {checkInsQuery.isError ? <ErrorState onRetry={() => void checkInsQuery.refetch()} /> : null}
       {checkInsQuery.data && checkInsQuery.data.items.length === 0 ? (

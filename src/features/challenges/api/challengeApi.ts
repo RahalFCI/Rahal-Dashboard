@@ -1,6 +1,15 @@
 import { apiClient } from '@/shared/api/client';
 import type { PagedResult } from '@/shared/api/types';
+import type { ChallengeFormValues } from '../schemas';
 import type { GetChallengeDto } from '../types';
+
+export function createChallenge(values: ChallengeFormValues) {
+  return apiClient<GetChallengeDto>({
+    method: 'POST',
+    url: '/Challenge',
+    data: values,
+  });
+}
 
 export function listChallenges(page: number, pageSize: number) {
   return apiClient<PagedResult<GetChallengeDto>>({
@@ -42,4 +51,8 @@ export function deleteChallenge(id: string) {
 // offered right after a delete.
 export function restoreChallenge(id: string) {
   return apiClient<string>({ method: 'POST', url: `/Challenge/${id}/restore` });
+}
+
+export function permanentDeleteChallenge(id: string) {
+  return apiClient<string>({ method: 'DELETE', url: `/Challenge/${id}/permanent` });
 }

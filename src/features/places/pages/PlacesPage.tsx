@@ -1,8 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Edit, Eye, Plus, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Edit, Eye, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/shared/components/ui/button';
 import { Dialog } from '@/shared/components/ui/dialog';
@@ -11,6 +11,7 @@ import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { Panel } from '@/shared/components/ui/panel';
 import { Textarea } from '@/shared/components/ui/textarea';
+import { ApiError } from '@/shared/api/errors';
 import { queryClient } from '@/shared/api/queryClient';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/layout/DataState';
 import { PageHeader } from '@/shared/layout/PageHeader';
@@ -19,26 +20,57 @@ import { cn } from '@/shared/lib/utils';
 import { PlaceChallengesDialog } from '@/features/challenges/components/PlaceChallengesDialog';
 import { PlaceCheckInsDialog } from '@/features/checkIns/components/PlaceCheckInsDialog';
 import { PlaceReviewsDialog } from '@/features/placeReviews/components/PlaceReviewsDialog';
+import { matchesQuery, paginateClientSide } from '@/features/search/lib/clientSearch';
+import { LocationSearchForm, type LocationSearchValues } from '@/features/search/components/LocationSearchForm';
 import { categorySchema, type CategoryFormValues } from '../schemas';
-import { createCategory, createPlace, deleteCategory, deletePlace, listCategories, listPlaces, updateCategory, updatePlace } from '../api/placesApi';
+import {
+  addPlacePhoto,
+  createCategory,
+  createPlace,
+  deleteCategory,
+  deletePlace,
+  listCategories,
+  listPlaces,
+  searchPlacesByLocation,
+  updateCategory,
+  updatePlace,
+} from '../api/placesApi';
 import { CategoryPlacesDialog } from '../components/CategoryPlacesDialog';
 import { PlaceDialog } from '../components/PlaceDialog';
 import { PlaceTable } from '../components/PlaceTable';
 import type { PlaceFormValues } from '../schemas';
 import type { GetPlaceCategoryDto, GetPlaceDto } from '../types';
 
-type PlacesView = 'places' | 'categories';
+function errorMessage(error: unknown) {
+  return error instanceof ApiError ? error.message : 'Something went wrong.';
+}
+
+type PlacesView = 'places' | 'categories' | 'search' | 'nearby';
 
 const views: { value: PlacesView; label: string }[] = [
   { value: 'places', label: 'Places' },
   { value: 'categories', label: 'Categories' },
+  { value: 'search', label: 'Search' },
+  { value: 'nearby', label: 'Nearby places' },
 ];
+
+// Moved from the old cross-feature SearchPage: fetches everything once and
+// filters/paginates entirely client-side, since the backend's dedicated text
+// search endpoints (/api/Search/*) depend on a Meilisearch index that is
+// frequently empty or inconsistently populated.
+const SEARCH_FETCH_ALL_PAGE_SIZE = 500;
+const SEARCH_PAGE_SIZE = 10;
 
 export function PlacesPage() {
   const [view, setView] = useState<PlacesView>('places');
   const [page, setPage] = useState(1);
   const [selectedPlace, setSelectedPlace] = useState<GetPlaceDto | null>(null);
   const [placeDialogOpen, setPlaceDialogOpen] = useState(false);
+  // Set once a new place is created but its photo upload fails - the place
+  // itself is not rolled back, so the dialog switches into a photo-retry view
+  // for this id instead of losing the just-created record.
+  const [createdPlaceId, setCreatedPlaceId] = useState<string | null>(null);
+  const [photoErrorMessage, setPhotoErrorMessage] = useState<string | null>(null);
 
   const [selectedCategory, setSelectedCategory] = useState<GetPlaceCategoryDto | null>(null);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
@@ -47,8 +79,39 @@ export function PlacesPage() {
   const [viewChallengesPlace, setViewChallengesPlace] = useState<GetPlaceDto | null>(null);
   const [viewReviewsPlace, setViewReviewsPlace] = useState<GetPlaceDto | null>(null);
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchPage, setSearchPage] = useState(1);
+  const [locationParams, setLocationParams] = useState<LocationSearchValues | null>(null);
+  const [nearbyPage, setNearbyPage] = useState(1);
+
   const placesQuery = useQuery({ queryKey: ['places', page], queryFn: () => listPlaces(page, 10), enabled: view === 'places' });
   const categoriesQuery = useQuery({ queryKey: ['categories'], queryFn: listCategories });
+
+  // Search view: bulk-fetch all places once and filter/paginate client-side.
+  // Moved here from the old cross-feature SearchPage's places tab.
+  const placesSearchRawQuery = useQuery({
+    queryKey: ['search-source', 'places'],
+    queryFn: () => listPlaces(1, SEARCH_FETCH_ALL_PAGE_SIZE),
+    enabled: view === 'search',
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
+  const placeSearchResult = useMemo(
+    () =>
+      paginateClientSide(
+        (placesSearchRawQuery.data?.items ?? []).filter((item) => matchesQuery(item, searchQuery)),
+        searchPage,
+        SEARCH_PAGE_SIZE,
+      ),
+    [placesSearchRawQuery.data, searchQuery, searchPage],
+  );
+
+  // Nearby view: moved here from the old cross-feature SearchPage's nearby tab.
+  const nearbyQuery = useQuery({
+    queryKey: ['search-source', 'nearby', locationParams, nearbyPage],
+    queryFn: () => searchPlacesByLocation({ ...locationParams!, page: nearbyPage, pageSize: SEARCH_PAGE_SIZE }),
+    enabled: view === 'nearby' && locationParams !== null,
+  });
 
   const categoryForm = useForm<CategoryFormValues>({
     resolver: zodResolver(categorySchema),
@@ -64,16 +127,62 @@ export function PlacesPage() {
 
   function changeView(nextView: string) {
     setView(nextView as PlacesView);
+    setSearchQuery('');
+    setSearchPage(1);
+    setLocationParams(null);
+    setNearbyPage(1);
   }
 
   const upsertPlaceMutation = useMutation({
-    mutationFn: (values: PlaceFormValues) => (selectedPlace ? updatePlace(selectedPlace.id, values) : createPlace(values)),
-    onSuccess: () => {
+    mutationFn: async ({ values, photo }: { values: PlaceFormValues; photo: File | null }) => {
+      if (selectedPlace) {
+        await updatePlace(selectedPlace.id, values);
+        return { photoFailed: false as const, placeId: selectedPlace.id };
+      }
+      const newPlaceId = await createPlace(values);
+      if (!photo) return { photoFailed: false as const, placeId: newPlaceId };
+      try {
+        await addPlacePhoto(newPlaceId, photo);
+        return { photoFailed: false as const, placeId: newPlaceId };
+      } catch (error) {
+        // The place itself was created successfully - only the photo upload
+        // failed, so this isn't treated as a full mutation failure (which
+        // would leave the admin thinking nothing happened).
+        return { photoFailed: true as const, placeId: newPlaceId, message: errorMessage(error) };
+      }
+    },
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries({ queryKey: ['places'] });
+      void queryClient.invalidateQueries({ queryKey: ['place-photos', result.placeId] });
+      if (result.photoFailed) {
+        setCreatedPlaceId(result.placeId);
+        setPhotoErrorMessage(result.message);
+        return;
+      }
       setPlaceDialogOpen(false);
       setSelectedPlace(null);
-      void queryClient.invalidateQueries({ queryKey: ['places'] });
+      setCreatedPlaceId(null);
+      setPhotoErrorMessage(null);
     },
   });
+
+  const retryPhotoMutation = useMutation({
+    mutationFn: (photo: File) => addPlacePhoto(createdPlaceId!, photo),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['place-photos', createdPlaceId] });
+      setPlaceDialogOpen(false);
+      setCreatedPlaceId(null);
+      setPhotoErrorMessage(null);
+    },
+    onError: (error) => setPhotoErrorMessage(errorMessage(error)),
+  });
+
+  function closePlaceDialog() {
+    setPlaceDialogOpen(false);
+    setSelectedPlace(null);
+    setCreatedPlaceId(null);
+    setPhotoErrorMessage(null);
+  }
 
   const deletePlaceMutation = useMutation({
     mutationFn: (place: GetPlaceDto) => deletePlace(place.id),
@@ -107,13 +216,15 @@ export function PlacesPage() {
               type="button"
               onClick={() => {
                 setSelectedPlace(null);
+                setCreatedPlaceId(null);
+                setPhotoErrorMessage(null);
                 setPlaceDialogOpen(true);
               }}
             >
               <Plus size={17} />
               New place
             </Button>
-          ) : (
+          ) : view === 'categories' ? (
             <Button
               type="button"
               onClick={() => {
@@ -124,7 +235,7 @@ export function PlacesPage() {
               <Plus size={17} />
               New category
             </Button>
-          )
+          ) : null
         }
       />
 
@@ -145,7 +256,76 @@ export function PlacesPage() {
         </Tabs.List>
       </Tabs.Root>
 
-      {view === 'places' ? (
+      {view === 'search' ? (
+        <>
+          <Panel className="mb-4 p-4">
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <Input
+                  type="search"
+                  placeholder="Type any letter or number in a place name..."
+                  value={searchQuery}
+                  onChange={(event) => {
+                    setSearchQuery(event.target.value);
+                    setSearchPage(1);
+                  }}
+                />
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                aria-label="Refresh results"
+                disabled={placesSearchRawQuery.isFetching}
+                onClick={() => void placesSearchRawQuery.refetch()}
+              >
+                <RefreshCw size={16} className={placesSearchRawQuery.isFetching ? 'animate-spin' : undefined} />
+                Refresh
+              </Button>
+            </div>
+          </Panel>
+
+          {placesSearchRawQuery.isLoading ? <LoadingState label="Loading records..." /> : null}
+          {placesSearchRawQuery.isError ? <ErrorState onRetry={() => void placesSearchRawQuery.refetch()} /> : null}
+          {!placesSearchRawQuery.isLoading && !placesSearchRawQuery.isError && searchQuery.length === 0 ? (
+            <EmptyState title="Start typing to search" description="Matches appear instantly as you type any part of the name." />
+          ) : null}
+          {!placesSearchRawQuery.isLoading && !placesSearchRawQuery.isError && searchQuery.length > 0 && placeSearchResult.items.length === 0 ? (
+            <EmptyState title="No matches" description={`No places matched "${searchQuery}".`} />
+          ) : null}
+          {searchQuery.length > 0 && placeSearchResult.items.length > 0 ? (
+            <Panel className="overflow-hidden">
+              <PlaceTable places={placeSearchResult.items} categories={categoriesQuery.data ?? []} />
+              <PaginationBar page={searchPage} result={placeSearchResult} onPageChange={setSearchPage} />
+            </Panel>
+          ) : null}
+        </>
+      ) : view === 'nearby' ? (
+        <>
+          <Panel className="mb-4 p-4">
+            <LocationSearchForm
+              onSubmit={(values) => {
+                setLocationParams(values);
+                setNearbyPage(1);
+              }}
+            />
+          </Panel>
+
+          {nearbyQuery.isLoading ? <LoadingState label="Searching..." /> : null}
+          {nearbyQuery.isError ? <ErrorState onRetry={() => void nearbyQuery.refetch()} /> : null}
+          {!nearbyQuery.isLoading && !nearbyQuery.isError && locationParams === null ? (
+            <EmptyState title="Enter coordinates to search" description="Results appear after you submit a latitude, longitude, and radius." />
+          ) : null}
+          {!nearbyQuery.isLoading && !nearbyQuery.isError && locationParams !== null && nearbyQuery.data && nearbyQuery.data.items.length === 0 ? (
+            <EmptyState title="No matches" description="No places found within that radius." />
+          ) : null}
+          {nearbyQuery.data && nearbyQuery.data.items.length > 0 ? (
+            <Panel className="overflow-hidden">
+              <PlaceTable places={nearbyQuery.data.items} categories={categoriesQuery.data ?? []} />
+              <PaginationBar page={nearbyPage} result={nearbyQuery.data} onPageChange={setNearbyPage} />
+            </Panel>
+          ) : null}
+        </>
+      ) : view === 'places' ? (
         <>
           {placesQuery.isLoading ? <LoadingState /> : null}
           {placesQuery.isError ? <ErrorState onRetry={() => void placesQuery.refetch()} /> : null}
@@ -157,6 +337,8 @@ export function PlacesPage() {
                 categories={categoriesQuery.data ?? []}
                 onEdit={(place) => {
                   setSelectedPlace(place);
+                  setCreatedPlaceId(null);
+                  setPhotoErrorMessage(null);
                   setPlaceDialogOpen(true);
                 }}
                 onDelete={(place) => void deletePlaceMutation.mutate(place)}
@@ -237,8 +419,16 @@ export function PlacesPage() {
         open={placeDialogOpen}
         place={selectedPlace}
         categories={categoriesQuery.data ?? []}
-        onOpenChange={setPlaceDialogOpen}
-        onSubmit={(values) => upsertPlaceMutation.mutateAsync(values)}
+        createdPlaceId={createdPlaceId}
+        photoError={photoErrorMessage}
+        isSubmittingPhoto={retryPhotoMutation.isPending}
+        onOpenChange={(open) => {
+          if (open) setPlaceDialogOpen(true);
+          else closePlaceDialog();
+        }}
+        onSubmit={(values, photo) => upsertPlaceMutation.mutateAsync({ values, photo })}
+        onRetryPhoto={(photo) => retryPhotoMutation.mutateAsync(photo)}
+        onSkipPhoto={closePlaceDialog}
       />
 
       <Dialog

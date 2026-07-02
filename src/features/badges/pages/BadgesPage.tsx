@@ -1,9 +1,10 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Edit, Info, Medal, Plus, Trash2 } from 'lucide-react';
+import { Edit, Info, Medal, Plus, Trash, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { matchesQuery, paginateClientSide } from '@/features/search/lib/clientSearch';
 import { ApiError } from '@/shared/api/errors';
 import { Button } from '@/shared/components/ui/button';
+import { Dialog } from '@/shared/components/ui/dialog';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { Panel } from '@/shared/components/ui/panel';
@@ -12,7 +13,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/shared/layout/DataState'
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { PaginationBar } from '@/shared/layout/PaginationBar';
 import { useToastStore } from '@/shared/stores/toastStore';
-import { createBadge, deleteBadge, listBadges, restoreBadge, updateBadge } from '../api/badgesApi';
+import { createBadge, deleteBadge, listBadges, permanentDeleteBadge, restoreBadge, updateBadge } from '../api/badgesApi';
 import { BadgeDetailDialog } from '../components/BadgeDetailDialog';
 import { BadgeDialog } from '../components/BadgeDialog';
 import type { GetBadgeDto } from '../types';
@@ -26,6 +27,7 @@ export function BadgesPage() {
   const [badgeDialogOpen, setBadgeDialogOpen] = useState(false);
   const [viewBadgeId, setViewBadgeId] = useState<string | null>(null);
   const [nameFilter, setNameFilter] = useState('');
+  const [confirmPermanentDeleteId, setConfirmPermanentDeleteId] = useState<string | null>(null);
 
   // GET /Badge/name/{name} (exposed as getBadgeByName) only does an exact,
   // case-sensitive match, so it can't power a type-as-you-go, case-insensitive
@@ -76,6 +78,19 @@ export function BadgesPage() {
     mutationFn: (id: string) => restoreBadge(id),
     onSuccess: invalidateBadges,
     onError: toastOnError,
+  });
+
+  const permanentDeleteBadgeMutation = useMutation({
+    mutationFn: (id: string) => permanentDeleteBadge(id),
+    onSuccess: () => {
+      setConfirmPermanentDeleteId(null);
+      invalidateBadges();
+      useToastStore.getState().add({ message: 'Badge permanently deleted.', variant: 'success' });
+    },
+    onError: (error) => {
+      setConfirmPermanentDeleteId(null);
+      toastOnError(error);
+    },
   });
 
   const deleteBadgeMutation = useMutation({
@@ -199,6 +214,16 @@ export function BadgesPage() {
                         >
                           <Trash2 size={16} />
                         </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Permanently delete badge"
+                          className="text-error hover:text-error"
+                          onClick={() => setConfirmPermanentDeleteId(badge.id)}
+                        >
+                          <Trash size={16} />
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -231,6 +256,27 @@ export function BadgesPage() {
           if (!open) setViewBadgeId(null);
         }}
       />
+
+      <Dialog
+        open={confirmPermanentDeleteId !== null}
+        onOpenChange={(open) => { if (!open) setConfirmPermanentDeleteId(null); }}
+        title="Permanently delete badge?"
+        description="This cannot be undone. The badge and all associated data will be removed from the database entirely and cannot be restored."
+      >
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="ghost" onClick={() => setConfirmPermanentDeleteId(null)}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            className="bg-error text-on-error hover:bg-error/90"
+            disabled={permanentDeleteBadgeMutation.isPending}
+            onClick={() => confirmPermanentDeleteId && permanentDeleteBadgeMutation.mutate(confirmPermanentDeleteId)}
+          >
+            Delete permanently
+          </Button>
+        </div>
+      </Dialog>
     </>
   );
 }

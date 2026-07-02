@@ -1,6 +1,7 @@
 import { CheckSquare, Edit, Image, Star, Swords, Trash2 } from 'lucide-react';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
+import { PlaceThumbnail } from './PlaceThumbnail';
 import type { GetPlaceCategoryDto, GetPlaceDto } from '../types';
 
 interface PlaceTableProps {
@@ -47,8 +48,13 @@ export function PlaceTable({
           {places.map((place) => (
             <tr key={place.id} className="border-t border-outline/40">
               <td className="px-4 py-3">
-                <p className="font-medium">{place.name}</p>
-                <p className="line-clamp-1 text-xs text-on-surface-variant">{place.description}</p>
+                <div className="flex items-center gap-3">
+                  <PlaceThumbnail placeId={place.id} />
+                  <div>
+                    <p className="font-medium">{place.name}</p>
+                    <p className="line-clamp-1 text-xs text-on-surface-variant">{place.description}</p>
+                  </div>
+                </div>
               </td>
               <td className="px-4 py-3">
                 <Badge>{categoryNameById.get(place.placeCategoryId) || place.categoryName || 'Uncategorized'}</Badge>

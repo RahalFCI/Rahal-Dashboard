@@ -3,6 +3,7 @@ export interface GetExplorerAchievementDto {
   achievementId: string;
   achievementTitle: string;
   explorerId: string;
+  explorerName: string;
   earnedAt: string;
   isNotified: boolean;
 }

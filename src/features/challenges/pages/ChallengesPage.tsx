@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Eye, Trash2 } from 'lucide-react';
+import { Eye, Plus, Trash, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { listPlaces } from '@/features/places/api/placesApi';
 import { matchesQuery, paginateClientSide } from '@/features/search/lib/clientSearch';
@@ -7,6 +7,7 @@ import { ApiError } from '@/shared/api/errors';
 import { queryClient } from '@/shared/api/queryClient';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
+import { Dialog } from '@/shared/components/ui/dialog';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { Panel } from '@/shared/components/ui/panel';
@@ -14,8 +15,9 @@ import { EmptyState, ErrorState, LoadingState } from '@/shared/layout/DataState'
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { PaginationBar } from '@/shared/layout/PaginationBar';
 import { useToastStore } from '@/shared/stores/toastStore';
-import { deleteChallenge, listChallenges, restoreChallenge } from '../api/challengeApi';
+import { createChallenge, deleteChallenge, listChallenges, permanentDeleteChallenge, restoreChallenge } from '../api/challengeApi';
 import { ChallengeDetailDialog } from '../components/ChallengeDetailDialog';
+import { ChallengeDialog } from '../components/ChallengeDialog';
 
 const PAGE_SIZE = 10;
 const FETCH_ALL_PAGE_SIZE = 500;
@@ -24,6 +26,8 @@ export function ChallengesPage() {
   const [page, setPage] = useState(1);
   const [viewChallengeId, setViewChallengeId] = useState<string | null>(null);
   const [nameFilter, setNameFilter] = useState('');
+  const [confirmPermanentDeleteId, setConfirmPermanentDeleteId] = useState<string | null>(null);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   // GET /Challenge/name/{name} (used elsewhere via getChallengeByName) only
   // does an exact, case-sensitive match, so it can't power a type-as-you-go,
@@ -58,10 +62,32 @@ export function ChallengesPage() {
     if (error instanceof ApiError) useToastStore.getState().add({ message: error.message, variant: 'error' });
   }
 
+  const createMutation = useMutation({
+    mutationFn: createChallenge,
+    onSuccess: () => {
+      setCreateDialogOpen(false);
+      invalidate();
+      useToastStore.getState().add({ message: 'Challenge created.', variant: 'success' });
+    },
+  });
+
   const restoreMutation = useMutation({
     mutationFn: (id: string) => restoreChallenge(id),
     onSuccess: invalidate,
     onError: toastOnError,
+  });
+
+  const permanentDeleteMutation = useMutation({
+    mutationFn: (id: string) => permanentDeleteChallenge(id),
+    onSuccess: () => {
+      setConfirmPermanentDeleteId(null);
+      invalidate();
+      useToastStore.getState().add({ message: 'Challenge permanently deleted.', variant: 'success' });
+    },
+    onError: (error) => {
+      setConfirmPermanentDeleteId(null);
+      toastOnError(error);
+    },
   });
 
   const deleteMutation = useMutation({
@@ -90,7 +116,17 @@ export function ChallengesPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Admin" title="Challenges" description="Place-based challenges explorers can attempt, with difficulty and XP reward." />
+      <PageHeader
+        eyebrow="Admin"
+        title="Challenges"
+        description="Place-based challenges explorers can attempt, with difficulty and XP reward."
+        actions={
+          <Button type="button" onClick={() => setCreateDialogOpen(true)}>
+            <Plus size={17} />
+            New challenge
+          </Button>
+        }
+      />
 
       <Panel className="mb-4 p-4">
         <Label htmlFor="challenge-name-filter">Filter challenges by name</Label>
@@ -163,6 +199,16 @@ export function ChallengesPage() {
                         >
                           <Trash2 size={16} />
                         </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Permanently delete challenge"
+                          className="text-error hover:text-error"
+                          onClick={() => setConfirmPermanentDeleteId(challenge.id)}
+                        >
+                          <Trash size={16} />
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -174,6 +220,17 @@ export function ChallengesPage() {
         </Panel>
       ) : null}
 
+      <ChallengeDialog
+        open={createDialogOpen}
+        places={placesQuery.data?.items ?? []}
+        onOpenChange={(open) => {
+          setCreateDialogOpen(open);
+          if (!open) createMutation.reset();
+        }}
+        onSubmit={(values) => createMutation.mutateAsync(values)}
+        error={createMutation.isError ? createMutation.error.message : null}
+      />
+
       <ChallengeDetailDialog
         id={viewChallengeId}
         open={viewChallengeId !== null}
@@ -181,6 +238,27 @@ export function ChallengesPage() {
           if (!open) setViewChallengeId(null);
         }}
       />
+
+      <Dialog
+        open={confirmPermanentDeleteId !== null}
+        onOpenChange={(open) => { if (!open) setConfirmPermanentDeleteId(null); }}
+        title="Permanently delete challenge?"
+        description="This cannot be undone. The challenge and all associated data will be removed from the database entirely and cannot be restored."
+      >
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="ghost" onClick={() => setConfirmPermanentDeleteId(null)}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            className="bg-error text-on-error hover:bg-error/90"
+            disabled={permanentDeleteMutation.isPending}
+            onClick={() => confirmPermanentDeleteId && permanentDeleteMutation.mutate(confirmPermanentDeleteId)}
+          >
+            Delete permanently
+          </Button>
+        </div>
+      </Dialog>
     </>
   );
 }

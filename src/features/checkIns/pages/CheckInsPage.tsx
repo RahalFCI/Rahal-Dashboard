@@ -1,16 +1,20 @@
 import * as Tabs from '@radix-ui/react-tabs';
-import { useQuery } from '@tanstack/react-query';
-import { Eye } from 'lucide-react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { CheckCircle, Eye, Trash2, XCircle } from 'lucide-react';
 import { useState } from 'react';
 import { listPlaces } from '@/features/places/api/placesApi';
+import { ApiError } from '@/shared/api/errors';
+import { queryClient } from '@/shared/api/queryClient';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Panel } from '@/shared/components/ui/panel';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/layout/DataState';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { PaginationBar } from '@/shared/layout/PaginationBar';
+import { useExplorerNames } from '@/shared/hooks/useExplorerNames';
 import { cn } from '@/shared/lib/utils';
-import { getPendingCheckIns, listCheckIns } from '../api/checkInApi';
+import { useToastStore } from '@/shared/stores/toastStore';
+import { deleteCheckIn, getPendingCheckIns, listCheckIns, updateCheckIn, type ValidationStatus } from '../api/checkInApi';
 import { CheckInDetailDialog } from '../components/CheckInDetailDialog';
 
 const statusBadgeClass: Record<string, string> = {
@@ -29,6 +33,31 @@ export function CheckInsPage() {
   const [view, setView] = useState<CheckInsView>('all');
   const [page, setPage] = useState(1);
   const [viewCheckIn, setViewCheckIn] = useState<{ explorerId: string; placeId: string } | null>(null);
+
+  function toastOnError(error: unknown) {
+    if (error instanceof ApiError) useToastStore.getState().add({ message: error.message, variant: 'error' });
+  }
+
+  const deleteMutation = useMutation({
+    mutationFn: ({ explorerId, placeId }: { explorerId: string; placeId: string }) =>
+      deleteCheckIn(explorerId, placeId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['check-ins'] });
+      useToastStore.getState().add({ message: 'Check-in deleted.', variant: 'success' });
+    },
+    onError: toastOnError,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ explorerId, placeId, validationStatus }: { explorerId: string; placeId: string; validationStatus: ValidationStatus }) =>
+      updateCheckIn(explorerId, placeId, { validationStatus }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['check-ins'] });
+      void queryClient.invalidateQueries({ queryKey: ['check-in'] });
+      useToastStore.getState().add({ message: 'Check-in status updated.', variant: 'success' });
+    },
+    onError: toastOnError,
+  });
 
   const checkInsQuery = useQuery({
     queryKey: ['check-ins', view, page],
@@ -49,6 +78,8 @@ export function CheckInsPage() {
     queryFn: () => listPlaces(1, 500),
   });
   const placeNameById = new Map((placesQuery.data?.items ?? []).map((place) => [place.id, place.name]));
+
+  const explorerNameById = useExplorerNames((checkInsQuery.data?.items ?? []).map((checkIn) => checkIn.explorerId));
 
   return (
     <>
@@ -101,8 +132,8 @@ export function CheckInsPage() {
                     <td className="px-4 py-3 font-medium">
                       {placeNameById.get(checkIn.placeId) || checkIn.placeName || 'Unknown place'}
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-on-surface-variant" title={checkIn.explorerId}>
-                      {checkIn.explorerId.slice(0, 8)}…
+                    <td className="px-4 py-3 font-medium" title={checkIn.explorerId}>
+                      {explorerNameById.get(checkIn.explorerId) || 'Unknown explorer'}
                     </td>
                     <td className="px-4 py-3">
                       <Badge className={statusBadgeClass[checkIn.validationStatusName] ?? ''}>
@@ -111,6 +142,32 @@ export function CheckInsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end">
+                        {checkIn.validationStatusName === 'Pending' ? (
+                          <>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Verify check-in"
+                              className="text-green-600 hover:text-green-600"
+                              disabled={updateMutation.isPending}
+                              onClick={() => updateMutation.mutate({ explorerId: checkIn.explorerId, placeId: checkIn.placeId, validationStatus: 'Verified' })}
+                            >
+                              <CheckCircle size={16} />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Fail check-in"
+                              className="text-error hover:text-error"
+                              disabled={updateMutation.isPending}
+                              onClick={() => updateMutation.mutate({ explorerId: checkIn.explorerId, placeId: checkIn.placeId, validationStatus: 'Failed' })}
+                            >
+                              <XCircle size={16} />
+                            </Button>
+                          </>
+                        ) : null}
                         <Button
                           type="button"
                           variant="ghost"
@@ -119,6 +176,16 @@ export function CheckInsPage() {
                           onClick={() => setViewCheckIn({ explorerId: checkIn.explorerId, placeId: checkIn.placeId })}
                         >
                           <Eye size={16} />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Delete check-in"
+                          disabled={deleteMutation.isPending}
+                          onClick={() => deleteMutation.mutate({ explorerId: checkIn.explorerId, placeId: checkIn.placeId })}
+                        >
+                          <Trash2 size={16} />
                         </Button>
                       </div>
                     </td>
@@ -133,6 +200,7 @@ export function CheckInsPage() {
 
       <CheckInDetailDialog
         explorerId={viewCheckIn?.explorerId ?? null}
+        explorerName={viewCheckIn ? explorerNameById.get(viewCheckIn.explorerId) : undefined}
         placeId={viewCheckIn?.placeId ?? null}
         open={viewCheckIn !== null}
         onOpenChange={(open) => {

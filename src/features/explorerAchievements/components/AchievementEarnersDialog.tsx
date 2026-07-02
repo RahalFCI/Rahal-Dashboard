@@ -56,8 +56,8 @@ export function AchievementEarnersDialog({ achievementId, achievementTitle, open
             <tbody>
               {earnersQuery.data.items.map((earned) => (
                 <tr key={earned.id} className="border-t border-outline/40">
-                  <td className="px-4 py-3 font-mono text-xs text-on-surface-variant" title={earned.explorerId}>
-                    {earned.explorerId.slice(0, 8)}…
+                  <td className="px-4 py-3 font-medium" title={earned.explorerId}>
+                    {earned.explorerName || 'Unknown explorer'}
                   </td>
                   <td className="px-4 py-3 text-on-surface-variant">{new Date(earned.earnedAt).toLocaleString()}</td>
                   <td className="px-4 py-3">

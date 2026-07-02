@@ -11,6 +11,7 @@ import { ReviewDetailDialog } from './ReviewDetailDialog';
 
 interface ExplorerReviewsDialogProps {
   explorerId: string | null;
+  explorerName?: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -21,7 +22,7 @@ interface ReviewKey {
   checkInId: string;
 }
 
-export function ExplorerReviewsDialog({ explorerId, open, onOpenChange }: ExplorerReviewsDialogProps) {
+export function ExplorerReviewsDialog({ explorerId, explorerName, open, onOpenChange }: ExplorerReviewsDialogProps) {
   const [viewReviewKey, setViewReviewKey] = useState<ReviewKey | null>(null);
 
   const reviewsQuery = useQuery({
@@ -36,7 +37,7 @@ export function ExplorerReviewsDialog({ explorerId, open, onOpenChange }: Explor
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} title="Reviews by this explorer" description={explorerId ?? undefined}>
+    <Dialog open={open} onOpenChange={onOpenChange} title="Reviews by this explorer" description={explorerName || explorerId || undefined}>
       {reviewsQuery.isLoading ? <LoadingState /> : null}
       {reviewsQuery.isError ? <ErrorState onRetry={() => void reviewsQuery.refetch()} /> : null}
       {reviewsQuery.data && reviewsQuery.data.length === 0 ? (
@@ -113,6 +114,7 @@ export function ExplorerReviewsDialog({ explorerId, open, onOpenChange }: Explor
 
       <ReviewDetailDialog
         reviewKey={viewReviewKey}
+        explorerName={explorerName ?? undefined}
         open={viewReviewKey !== null}
         onOpenChange={(open) => {
           if (!open) setViewReviewKey(null);

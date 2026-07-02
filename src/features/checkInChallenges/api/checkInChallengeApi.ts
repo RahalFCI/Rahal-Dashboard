@@ -26,3 +26,15 @@ export function getCheckInChallengesByChallengeId(challengeId: string, page: num
     params: { page, pageSize },
   });
 }
+
+export function deleteCheckInChallenge(id: string) {
+  return apiClient<string>({ method: 'DELETE', url: `/CheckInChallenge/${id}` });
+}
+
+export function restoreCheckInChallenge(id: string) {
+  return apiClient<string>({ method: 'POST', url: `/CheckInChallenge/${id}/restore` });
+}
+
+export function permanentDeleteCheckInChallenge(id: string) {
+  return apiClient<string>({ method: 'DELETE', url: `/CheckInChallenge/${id}/permanent` });
+}

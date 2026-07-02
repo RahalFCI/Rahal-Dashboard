@@ -1,12 +1,18 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { CheckCircle, Trash2, XCircle } from 'lucide-react';
+import { ApiError } from '@/shared/api/errors';
+import { queryClient } from '@/shared/api/queryClient';
 import { Badge } from '@/shared/components/ui/badge';
+import { Button } from '@/shared/components/ui/button';
 import { Dialog } from '@/shared/components/ui/dialog';
 import { Panel } from '@/shared/components/ui/panel';
 import { ErrorState, LoadingState } from '@/shared/layout/DataState';
-import { getCheckIn } from '../api/checkInApi';
+import { useToastStore } from '@/shared/stores/toastStore';
+import { deleteCheckIn, getCheckIn, updateCheckIn, type ValidationStatus } from '../api/checkInApi';
 
 interface CheckInDetailDialogProps {
   explorerId: string | null;
+  explorerName?: string;
   placeId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -17,11 +23,36 @@ const statusBadgeClass: Record<string, string> = {
   Failed: 'bg-red-100 text-red-700',
 };
 
-export function CheckInDetailDialog({ explorerId, placeId, open, onOpenChange }: CheckInDetailDialogProps) {
+export function CheckInDetailDialog({ explorerId, explorerName, placeId, open, onOpenChange }: CheckInDetailDialogProps) {
   const checkInQuery = useQuery({
     queryKey: ['check-in', explorerId, placeId],
     queryFn: () => getCheckIn(explorerId!, placeId!),
     enabled: open && Boolean(explorerId) && Boolean(placeId),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteCheckIn(explorerId!, placeId!),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['check-ins'] });
+      useToastStore.getState().add({ message: 'Check-in deleted.', variant: 'success' });
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      if (error instanceof ApiError) useToastStore.getState().add({ message: error.message, variant: 'error' });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (validationStatus: ValidationStatus) => updateCheckIn(explorerId!, placeId!, { validationStatus }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['check-ins'] });
+      void queryClient.invalidateQueries({ queryKey: ['check-in', explorerId, placeId] });
+      useToastStore.getState().add({ message: 'Check-in status updated.', variant: 'success' });
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      if (error instanceof ApiError) useToastStore.getState().add({ message: error.message, variant: 'error' });
+    },
   });
 
   return (
@@ -35,9 +66,9 @@ export function CheckInDetailDialog({ explorerId, placeId, open, onOpenChange }:
             <p className="mt-1 font-medium text-on-surface">{checkInQuery.data.placeName}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-[0.14em] text-on-surface-variant">Explorer ID</p>
-            <p className="mt-1 font-mono text-xs text-on-surface-variant" title={checkInQuery.data.explorerId}>
-              {checkInQuery.data.explorerId}
+            <p className="text-xs uppercase tracking-[0.14em] text-on-surface-variant">Explorer</p>
+            <p className="mt-1 font-medium text-on-surface" title={checkInQuery.data.explorerId}>
+              {explorerName || 'Unknown explorer'}
             </p>
           </div>
           <div>
@@ -45,6 +76,42 @@ export function CheckInDetailDialog({ explorerId, placeId, open, onOpenChange }:
             <Badge className={`mt-1 ${statusBadgeClass[checkInQuery.data.validationStatusName] ?? ''}`}>
               {checkInQuery.data.validationStatusName}
             </Badge>
+          </div>
+          {checkInQuery.data.validationStatusName === 'Pending' ? (
+            <div className="flex gap-2 border-t border-outline/40 pt-3">
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-green-600 hover:text-green-600"
+                disabled={updateMutation.isPending}
+                onClick={() => updateMutation.mutate('Verified')}
+              >
+                <CheckCircle size={16} className="mr-2" />
+                Verify
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-error hover:text-error"
+                disabled={updateMutation.isPending}
+                onClick={() => updateMutation.mutate('Failed')}
+              >
+                <XCircle size={16} className="mr-2" />
+                Fail
+              </Button>
+            </div>
+          ) : null}
+          <div className="flex justify-end border-t border-outline/40 pt-3">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Delete check-in"
+              disabled={deleteMutation.isPending}
+              onClick={() => deleteMutation.mutate()}
+            >
+              <Trash2 size={16} />
+            </Button>
           </div>
         </Panel>
       ) : null}

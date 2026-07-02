@@ -1,18 +1,25 @@
-import { useQuery } from '@tanstack/react-query';
-import { Search } from 'lucide-react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { Search, Trash, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { ApiError } from '@/shared/api/errors';
+import { queryClient } from '@/shared/api/queryClient';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
+import { Dialog } from '@/shared/components/ui/dialog';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { Panel } from '@/shared/components/ui/panel';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/layout/DataState';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { PaginationBar } from '@/shared/layout/PaginationBar';
+import { useToastStore } from '@/shared/stores/toastStore';
 import {
+  deleteCheckInChallenge,
   getCheckInChallengeById,
   getCheckInChallengesByChallengeId,
   getCheckInChallengesByCheckInId,
+  permanentDeleteCheckInChallenge,
+  restoreCheckInChallenge,
 } from '../api/checkInChallengeApi';
 
 const statusBadgeClass: Record<string, string> = {
@@ -23,6 +30,7 @@ const statusBadgeClass: Record<string, string> = {
 export function CheckInChallengesPage() {
   const [idInput, setIdInput] = useState('');
   const [searchedId, setSearchedId] = useState('');
+  const [confirmPermanentDeleteId, setConfirmPermanentDeleteId] = useState<string | null>(null);
 
   // There's no "list all" endpoint for this resource - GetCheckInChallengeById
   // is the only way to look one up here until the by-challenge/by-checkin
@@ -57,6 +65,50 @@ export function CheckInChallengesPage() {
     queryKey: ['check-in-challenges', 'by-challenge', searchedChallengeId, byChallengePage],
     queryFn: () => getCheckInChallengesByChallengeId(searchedChallengeId, byChallengePage, 10),
     enabled: searchedChallengeId.length > 0,
+  });
+
+  function toastOnError(error: unknown) {
+    if (error instanceof ApiError) useToastStore.getState().add({ message: error.message, variant: 'error' });
+  }
+
+  const permanentDeleteMutation = useMutation({
+    mutationFn: (id: string) => permanentDeleteCheckInChallenge(id),
+    onSuccess: (_data, id) => {
+      setConfirmPermanentDeleteId(null);
+      void queryClient.invalidateQueries({ queryKey: ['check-in-challenges'] });
+      if (id === searchedId) {
+        setSearchedId('');
+        setIdInput('');
+      }
+      useToastStore.getState().add({ message: 'Check-in challenge permanently deleted.', variant: 'success' });
+    },
+    onError: (error) => {
+      setConfirmPermanentDeleteId(null);
+      toastOnError(error);
+    },
+  });
+
+  const restoreCheckInChallengeMutation = useMutation({
+    mutationFn: (id: string) => restoreCheckInChallenge(id),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['check-in-challenges'] }),
+    onError: toastOnError,
+  });
+
+  const deleteCheckInChallengeMutation = useMutation({
+    mutationFn: (id: string) => deleteCheckInChallenge(id),
+    onSuccess: (_data, id) => {
+      void queryClient.invalidateQueries({ queryKey: ['check-in-challenges'] });
+      if (id === searchedId) {
+        setSearchedId('');
+        setIdInput('');
+      }
+      useToastStore.getState().add({
+        message: 'Check-in challenge deleted.',
+        variant: 'success',
+        action: { label: 'Undo', onClick: () => restoreCheckInChallengeMutation.mutate(id) },
+      });
+    },
+    onError: toastOnError,
   });
 
   return (
@@ -97,9 +149,30 @@ export function CheckInChallengesPage() {
           {challengeQuery.isError ? <ErrorState onRetry={() => void challengeQuery.refetch()} /> : null}
           {challengeQuery.data ? (
             <Panel className="grid grid-cols-2 gap-4 p-4 text-sm">
-              <div className="col-span-2">
-                <p className="text-xs uppercase tracking-[0.14em] text-on-surface-variant">Challenge</p>
-                <p className="mt-1 font-medium text-on-surface">{challengeQuery.data.challengeName}</p>
+              <div className="col-span-2 flex items-start justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.14em] text-on-surface-variant">Challenge</p>
+                  <p className="mt-1 font-medium text-on-surface">{challengeQuery.data.challengeName}</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Delete check-in challenge"
+                  onClick={() => void deleteCheckInChallengeMutation.mutate(challengeQuery.data.id)}
+                >
+                  <Trash2 size={16} />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Permanently delete check-in challenge"
+                  className="text-error hover:text-error"
+                  onClick={() => setConfirmPermanentDeleteId(challengeQuery.data.id)}
+                >
+                  <Trash size={16} />
+                </Button>
               </div>
               <div>
                 <p className="text-xs uppercase tracking-[0.14em] text-on-surface-variant">Challenge ID</p>
@@ -108,9 +181,9 @@ export function CheckInChallengesPage() {
                 </p>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.14em] text-on-surface-variant">Explorer ID</p>
-                <p className="mt-1 font-mono text-xs text-on-surface-variant" title={challengeQuery.data.explorerId}>
-                  {challengeQuery.data.explorerId}
+                <p className="text-xs uppercase tracking-[0.14em] text-on-surface-variant">Explorer</p>
+                <p className="mt-1 font-medium text-on-surface" title={challengeQuery.data.explorerId}>
+                  {challengeQuery.data.explorerName || 'Unknown explorer'}
                 </p>
               </div>
               <div>
@@ -191,19 +264,43 @@ export function CheckInChallengesPage() {
                     <th className="px-4 py-3">Challenge</th>
                     <th className="px-4 py-3">Explorer</th>
                     <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {byCheckInQuery.data.items.map((challenge) => (
                     <tr key={challenge.id} className="border-t border-outline/40">
                       <td className="px-4 py-3 font-medium">{challenge.challengeName}</td>
-                      <td className="px-4 py-3 font-mono text-xs text-on-surface-variant" title={challenge.explorerId}>
-                        {challenge.explorerId.slice(0, 8)}…
+                      <td className="px-4 py-3 font-medium" title={challenge.explorerId}>
+                        {challenge.explorerName || 'Unknown explorer'}
                       </td>
                       <td className="px-4 py-3">
                         <Badge className={statusBadgeClass[challenge.validationStatus] ?? ''}>
                           {challenge.validationStatus}
                         </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Delete check-in challenge"
+                            onClick={() => void deleteCheckInChallengeMutation.mutate(challenge.id)}
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Permanently delete check-in challenge"
+                            className="text-error hover:text-error"
+                            onClick={() => setConfirmPermanentDeleteId(challenge.id)}
+                          >
+                            <Trash size={16} />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -260,18 +357,42 @@ export function CheckInChallengesPage() {
                   <tr>
                     <th className="px-4 py-3">Explorer</th>
                     <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {byChallengeQuery.data.items.map((challenge) => (
                     <tr key={challenge.id} className="border-t border-outline/40">
-                      <td className="px-4 py-3 font-mono text-xs text-on-surface-variant" title={challenge.explorerId}>
-                        {challenge.explorerId.slice(0, 8)}…
+                      <td className="px-4 py-3 font-medium" title={challenge.explorerId}>
+                        {challenge.explorerName || 'Unknown explorer'}
                       </td>
                       <td className="px-4 py-3">
                         <Badge className={statusBadgeClass[challenge.validationStatus] ?? ''}>
                           {challenge.validationStatus}
                         </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Delete check-in challenge"
+                            onClick={() => void deleteCheckInChallengeMutation.mutate(challenge.id)}
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Permanently delete check-in challenge"
+                            className="text-error hover:text-error"
+                            onClick={() => setConfirmPermanentDeleteId(challenge.id)}
+                          >
+                            <Trash size={16} />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -282,6 +403,28 @@ export function CheckInChallengesPage() {
           ) : null}
         </>
       ) : null}
+      <Dialog
+        open={confirmPermanentDeleteId !== null}
+        onOpenChange={(open) => { if (!open) setConfirmPermanentDeleteId(null); }}
+        title="Permanently delete check-in challenge?"
+        description="This action cannot be undone. The record will be removed from the database with no way to restore it."
+      >
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="ghost" onClick={() => setConfirmPermanentDeleteId(null)}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            disabled={permanentDeleteMutation.isPending}
+            onClick={() => {
+              if (confirmPermanentDeleteId) void permanentDeleteMutation.mutate(confirmPermanentDeleteId);
+            }}
+          >
+            Delete permanently
+          </Button>
+        </div>
+      </Dialog>
     </>
   );
 }

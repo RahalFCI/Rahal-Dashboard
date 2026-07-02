@@ -1,6 +1,7 @@
 export interface GetUserStatsDto {
   id: string;
   explorerId: string;
+  explorerName: string;
   availableXp: number;
   cumulativeXp: number;
   currentStreak: number;

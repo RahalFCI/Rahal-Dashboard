@@ -41,9 +41,9 @@ export function ExplorerAchievementDetailDialog({ id, open, onOpenChange }: Expl
             </p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-[0.14em] text-on-surface-variant">Explorer ID</p>
-            <p className="mt-1 font-mono text-xs text-on-surface-variant" title={earnedQuery.data.explorerId}>
-              {earnedQuery.data.explorerId}
+            <p className="text-xs uppercase tracking-[0.14em] text-on-surface-variant">Explorer</p>
+            <p className="mt-1 font-medium text-on-surface" title={earnedQuery.data.explorerId}>
+              {earnedQuery.data.explorerName || 'Unknown explorer'}
             </p>
           </div>
           <div>

@@ -4,6 +4,7 @@ import { Badge } from '@/shared/components/ui/badge';
 import { Dialog } from '@/shared/components/ui/dialog';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/layout/DataState';
 import { PaginationBar } from '@/shared/layout/PaginationBar';
+import { useExplorerNames } from '@/shared/hooks/useExplorerNames';
 import { getCheckInsByPlace } from '../api/checkInApi';
 
 interface PlaceCheckInsDialogProps {
@@ -36,6 +37,11 @@ export function PlaceCheckInsDialog({ placeId, placeName, open, onOpenChange }: 
     enabled: open && Boolean(placeId),
   });
 
+  const explorerNameById = useExplorerNames(
+    (checkInsQuery.data?.items ?? []).map((checkIn) => checkIn.explorerId),
+    open,
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title={placeName ? `Check-ins at ${placeName}` : 'Check-ins at this place'}>
       {checkInsQuery.isLoading ? <LoadingState /> : null}
@@ -55,8 +61,8 @@ export function PlaceCheckInsDialog({ placeId, placeName, open, onOpenChange }: 
             <tbody>
               {checkInsQuery.data.items.map((checkIn) => (
                 <tr key={checkIn.explorerId} className="border-t border-outline/40">
-                  <td className="px-4 py-3 font-mono text-xs text-on-surface-variant" title={checkIn.explorerId}>
-                    {checkIn.explorerId.slice(0, 8)}…
+                  <td className="px-4 py-3 font-medium" title={checkIn.explorerId}>
+                    {explorerNameById.get(checkIn.explorerId) || 'Unknown explorer'}
                   </td>
                   <td className="px-4 py-3">
                     <Badge className={statusBadgeClass[checkIn.validationStatusName] ?? ''}>

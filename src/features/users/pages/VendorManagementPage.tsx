@@ -1,15 +1,17 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { CheckCircle2, Edit, Eye, Plus, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { CheckCircle2, Edit, Eye, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { approveVendorProfile, listDeletedVendorProfiles, listUnapprovedVendorProfiles, listVendorProfiles } from '@/features/vendors/api/vendorProfileApi';
+import { listUsers } from '@/features/users/api/usersApi';
 import { createVendorCategory, deleteVendorCategory, listVendorCategories, updateVendorCategory } from '@/features/vendors/api/vendorCategoryApi';
 import { VendorCategoryDetailDialog } from '@/features/vendors/components/VendorCategoryDetailDialog';
 import { vendorCategorySchema, type VendorCategoryFormValues } from '@/features/vendors/schemas';
 import type { VendorCategoryDto, VendorProfileDto } from '@/features/vendors/types';
-import { matchesQuery } from '@/features/search/lib/clientSearch';
+import { matchesQuery, paginateClientSide } from '@/features/search/lib/clientSearch';
+import { VendorSearchTable } from '@/features/search/components/VendorSearchTable';
 import { ApiError } from '@/shared/api/errors';
 import { queryClient } from '@/shared/api/queryClient';
 import { Badge } from '@/shared/components/ui/badge';
@@ -25,18 +27,28 @@ import { PaginationBar } from '@/shared/layout/PaginationBar';
 import { cn } from '@/shared/lib/utils';
 import { useToastStore } from '@/shared/stores/toastStore';
 
-type VendorView = 'all' | 'unapproved' | 'deleted' | 'categories';
+type VendorView = 'all' | 'unapproved' | 'deleted' | 'categories' | 'search';
 
 const views: { value: VendorView; label: string }[] = [
   { value: 'all', label: 'All vendors' },
   { value: 'unapproved', label: 'Pending approval' },
   { value: 'deleted', label: 'Deleted profiles' },
   { value: 'categories', label: 'Categories' },
+  { value: 'search', label: 'Search' },
 ];
+
+// Moved from the old cross-feature SearchPage: fetches everything once and
+// filters/paginates entirely client-side, since the backend's dedicated text
+// search endpoints (/api/Search/*) depend on a Meilisearch index that is
+// frequently empty or inconsistently populated.
+const SEARCH_FETCH_ALL_PAGE_SIZE = 500;
+const SEARCH_PAGE_SIZE = 10;
 
 export function VendorManagementPage() {
   const [view, setView] = useState<VendorView>('all');
   const [page, setPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchPage, setSearchPage] = useState(1);
 
   const vendorsQuery = useQuery({
     queryKey: ['vendor-profiles', view, page],
@@ -45,8 +57,37 @@ export function VendorManagementPage() {
       if (view === 'deleted') return listDeletedVendorProfiles(page, 10);
       return listVendorProfiles(page, 10);
     },
+    enabled: view !== 'categories' && view !== 'search',
+  });
+
+  // VendorProfileDto (Gamification module) has no email - it lives on the
+  // AspNetUsers account in the separate Users module. Resolved client-side
+  // the same way CheckInsPage resolves placeName: bulk-fetch and map by id.
+  const vendorUsersQuery = useQuery({
+    queryKey: ['users', 'vendor', 'for-email-lookup'],
+    queryFn: () => listUsers('vendor', 1, 500, true),
     enabled: view !== 'categories',
   });
+  const vendorEmailByUserId = new Map((vendorUsersQuery.data?.items ?? []).map((user) => [user.id, user.email]));
+
+  // Search view: bulk-fetch all vendor profiles once and filter/paginate
+  // client-side. Moved here from the old cross-feature SearchPage's vendors tab.
+  const vendorsSearchRawQuery = useQuery({
+    queryKey: ['search-source', 'vendors'],
+    queryFn: () => listVendorProfiles(1, SEARCH_FETCH_ALL_PAGE_SIZE),
+    enabled: view === 'search',
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
+  const vendorSearchResult = useMemo(
+    () =>
+      paginateClientSide(
+        (vendorsSearchRawQuery.data?.items ?? []).filter((item) => matchesQuery(item, searchQuery)),
+        searchPage,
+        SEARCH_PAGE_SIZE,
+      ),
+    [vendorsSearchRawQuery.data, searchQuery, searchPage],
+  );
 
   const categoriesQuery = useQuery({
     queryKey: ['vendor-categories'],
@@ -116,6 +157,8 @@ export function VendorManagementPage() {
   function changeView(nextView: string) {
     setView(nextView as VendorView);
     setPage(1);
+    setSearchQuery('');
+    setSearchPage(1);
   }
 
   return (
@@ -261,6 +304,49 @@ export function VendorManagementPage() {
             }}
           />
         </>
+      ) : view === 'search' ? (
+        <>
+          <Panel className="mb-4 p-4">
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <Input
+                  type="search"
+                  placeholder="Type any letter or number in a vendor name..."
+                  value={searchQuery}
+                  onChange={(event) => {
+                    setSearchQuery(event.target.value);
+                    setSearchPage(1);
+                  }}
+                />
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                aria-label="Refresh results"
+                disabled={vendorsSearchRawQuery.isFetching}
+                onClick={() => void vendorsSearchRawQuery.refetch()}
+              >
+                <RefreshCw size={16} className={vendorsSearchRawQuery.isFetching ? 'animate-spin' : undefined} />
+                Refresh
+              </Button>
+            </div>
+          </Panel>
+
+          {vendorsSearchRawQuery.isLoading ? <LoadingState label="Loading records..." /> : null}
+          {vendorsSearchRawQuery.isError ? <ErrorState onRetry={() => void vendorsSearchRawQuery.refetch()} /> : null}
+          {!vendorsSearchRawQuery.isLoading && !vendorsSearchRawQuery.isError && searchQuery.length === 0 ? (
+            <EmptyState title="Start typing to search" description="Matches appear instantly as you type any part of the name." />
+          ) : null}
+          {!vendorsSearchRawQuery.isLoading && !vendorsSearchRawQuery.isError && searchQuery.length > 0 && vendorSearchResult.items.length === 0 ? (
+            <EmptyState title="No matches" description={`No vendors matched "${searchQuery}".`} />
+          ) : null}
+          {searchQuery.length > 0 && vendorSearchResult.items.length > 0 ? (
+            <Panel className="overflow-hidden">
+              <VendorSearchTable vendors={vendorSearchResult.items} emailByUserId={vendorEmailByUserId} />
+              <PaginationBar page={searchPage} result={vendorSearchResult} onPageChange={setSearchPage} />
+            </Panel>
+          ) : null}
+        </>
       ) : (
         <>
           {vendorsQuery.isLoading ? <LoadingState /> : null}
@@ -286,7 +372,7 @@ export function VendorManagementPage() {
                       <tr key={vendor.userId} className="border-t border-outline/40">
                         <td className="px-4 py-3 align-middle">
                           <p className="font-medium text-on-surface">{vendor.displayName}</p>
-                          <p className="text-xs text-on-surface-variant">{vendor.userId}</p>
+                          <p className="text-xs text-on-surface-variant">{vendorEmailByUserId.get(vendor.userId) || ''}</p>
                         </td>
                         <td className="px-4 py-3 align-middle">{vendor.countryCode}</td>
                         <td className="px-4 py-3 align-middle">{vendor.address}</td>

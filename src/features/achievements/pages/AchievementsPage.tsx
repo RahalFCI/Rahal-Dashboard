@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Edit, Info, Plus, Trash2 } from 'lucide-react';
+import { Edit, Info, Plus, Trash, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { listBadges } from '@/features/badges/api/badgesApi';
@@ -26,6 +26,7 @@ import {
   deleteCriteriaType,
   listAchievements,
   listCriteriaTypes,
+  permanentDeleteAchievement,
   restoreAchievement,
   updateAchievement,
   updateCriteriaType,
@@ -52,6 +53,7 @@ export function AchievementsPage() {
   const [selectedCriteriaType, setSelectedCriteriaType] = useState<GetAchievementCriteriaTypeDto | null>(null);
   const [criteriaTypeDialogOpen, setCriteriaTypeDialogOpen] = useState(false);
   const [viewCriteriaTypeId, setViewCriteriaTypeId] = useState<string | null>(null);
+  const [confirmPermanentDeleteId, setConfirmPermanentDeleteId] = useState<string | null>(null);
 
   function changeView(nextView: string) {
     setView(nextView as AchievementsView);
@@ -106,6 +108,19 @@ export function AchievementsPage() {
       });
     },
     onError: toastOnError,
+  });
+
+  const permanentDeleteAchievementMutation = useMutation({
+    mutationFn: (id: string) => permanentDeleteAchievement(id),
+    onSuccess: () => {
+      setConfirmPermanentDeleteId(null);
+      invalidateAchievements();
+      useToastStore.getState().add({ message: 'Achievement permanently deleted.', variant: 'success' });
+    },
+    onError: (error) => {
+      setConfirmPermanentDeleteId(null);
+      toastOnError(error);
+    },
   });
 
   const upsertCriteriaTypeMutation = useMutation({
@@ -246,6 +261,16 @@ export function AchievementsPage() {
                               onClick={() => void deleteAchievementMutation.mutate(achievement.id)}
                             >
                               <Trash2 size={16} />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Permanently delete achievement"
+                              className="text-error hover:text-error"
+                              onClick={() => setConfirmPermanentDeleteId(achievement.id)}
+                            >
+                              <Trash size={16} />
                             </Button>
                           </div>
                         </td>
@@ -394,6 +419,27 @@ export function AchievementsPage() {
           if (!open) setViewCriteriaTypeId(null);
         }}
       />
+
+      <Dialog
+        open={confirmPermanentDeleteId !== null}
+        onOpenChange={(open) => { if (!open) setConfirmPermanentDeleteId(null); }}
+        title="Permanently delete achievement?"
+        description="This cannot be undone. The achievement definition and all associated data will be removed from the database entirely and cannot be restored."
+      >
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="ghost" onClick={() => setConfirmPermanentDeleteId(null)}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            className="bg-error text-on-error hover:bg-error/90"
+            disabled={permanentDeleteAchievementMutation.isPending}
+            onClick={() => confirmPermanentDeleteId && permanentDeleteAchievementMutation.mutate(confirmPermanentDeleteId)}
+          >
+            Delete permanently
+          </Button>
+        </div>
+      </Dialog>
     </>
   );
 }

@@ -57,3 +57,7 @@ export function deleteBadge(id: string) {
 export function restoreBadge(id: string) {
   return apiClient<string>({ method: 'POST', url: `/Badge/${id}/restore` });
 }
+
+export function permanentDeleteBadge(id: string) {
+  return apiClient<string>({ method: 'DELETE', url: `/Badge/${id}/permanent` });
+}

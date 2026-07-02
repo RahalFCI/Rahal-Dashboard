@@ -3,9 +3,10 @@ import type { VendorProfileDto } from '@/features/vendors/types';
 
 interface VendorSearchTableProps {
   vendors: VendorProfileDto[];
+  emailByUserId: Map<string, string>;
 }
 
-export function VendorSearchTable({ vendors }: VendorSearchTableProps) {
+export function VendorSearchTable({ vendors, emailByUserId }: VendorSearchTableProps) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[640px] text-left text-sm">
@@ -22,7 +23,7 @@ export function VendorSearchTable({ vendors }: VendorSearchTableProps) {
             <tr key={vendor.userId} className="border-t border-outline/40">
               <td className="px-4 py-3 align-middle">
                 <p className="font-medium text-on-surface">{vendor.displayName}</p>
-                <p className="text-xs text-on-surface-variant">{vendor.userId}</p>
+                <p className="text-xs text-on-surface-variant">{emailByUserId.get(vendor.userId) || ''}</p>
               </td>
               <td className="px-4 py-3 align-middle">{vendor.countryCode}</td>
               <td className="px-4 py-3 align-middle">{vendor.address}</td>

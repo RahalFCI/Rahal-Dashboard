@@ -7,11 +7,12 @@ import { getXpTransactionsByExplorerId } from '../api/xpTransactionApi';
 
 interface XpTransactionsDialogProps {
   explorerId: string | null;
+  explorerName?: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function XpTransactionsDialog({ explorerId, open, onOpenChange }: XpTransactionsDialogProps) {
+export function XpTransactionsDialog({ explorerId, explorerName, open, onOpenChange }: XpTransactionsDialogProps) {
   const [page, setPage] = useState(1);
 
   // Reset to page 1 whenever a different explorer is opened, without an
@@ -30,7 +31,7 @@ export function XpTransactionsDialog({ explorerId, open, onOpenChange }: XpTrans
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} title="XP transactions" description={explorerId ?? undefined}>
+    <Dialog open={open} onOpenChange={onOpenChange} title="XP transactions" description={explorerName || explorerId || undefined}>
       {transactionsQuery.isLoading ? <LoadingState /> : null}
       {transactionsQuery.isError ? <ErrorState onRetry={() => void transactionsQuery.refetch()} /> : null}
       {transactionsQuery.data && transactionsQuery.data.items.length === 0 ? (

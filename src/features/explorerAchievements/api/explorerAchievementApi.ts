@@ -44,3 +44,7 @@ export function deleteExplorerAchievement(id: string) {
 export function restoreExplorerAchievement(id: string) {
   return apiClient<string>({ method: 'POST', url: `/ExplorerAchievement/${id}/restore` });
 }
+
+export function permanentDeleteExplorerAchievement(id: string) {
+  return apiClient<string>({ method: 'DELETE', url: `/ExplorerAchievement/${id}/permanent` });
+}

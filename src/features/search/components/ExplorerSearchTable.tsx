@@ -3,9 +3,10 @@ import type { ExplorerProfileDto } from '@/features/users/api/explorerProfileApi
 
 interface ExplorerSearchTableProps {
   explorers: ExplorerProfileDto[];
+  emailByUserId: Map<string, string>;
 }
 
-export function ExplorerSearchTable({ explorers }: ExplorerSearchTableProps) {
+export function ExplorerSearchTable({ explorers, emailByUserId }: ExplorerSearchTableProps) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[560px] text-left text-sm">
@@ -21,7 +22,7 @@ export function ExplorerSearchTable({ explorers }: ExplorerSearchTableProps) {
             <tr key={explorer.userId} className="border-t border-outline/40">
               <td className="px-4 py-3 align-middle">
                 <p className="font-medium text-on-surface">{explorer.displayName}</p>
-                <p className="text-xs text-on-surface-variant">{explorer.userId}</p>
+                <p className="text-xs text-on-surface-variant">{emailByUserId.get(explorer.userId) || ''}</p>
               </td>
               <td className="px-4 py-3 align-middle">{explorer.countryCode}</td>
               <td className="px-4 py-3 align-middle">

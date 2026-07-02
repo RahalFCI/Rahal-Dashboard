@@ -59,8 +59,8 @@ function roleToUserRole(role: ManageableRole): UserRole {
 
 function normalizeRole(role: UserSummaryDto['role']): UserRole | undefined {
   if (role === 0) return 'Explorer';
-  if (role === 1) return 'Vendor';
-  if (role === 2) return 'Admin';
+  if (role === 1) return 'Admin';
+  if (role === 2) return 'Vendor';
   if (role === 'Admin' || role === 'Vendor' || role === 'Explorer') return role;
   return undefined;
 }
@@ -112,6 +112,16 @@ export function restoreUser(_role: ManageableRole, id: string) {
   return apiClient<string>({
     method: 'PUT',
     url: `/User/restore/${id}`,
+  });
+}
+
+// Self-deletion only: the backend guards GetCurrentUserId() === id,
+// so this can only be called with the currently-authenticated admin's own id.
+// Returns 204 No Content on success.
+export function permanentDeleteSelf(id: string) {
+  return apiClientNoContent({
+    method: 'DELETE',
+    url: `/User/permanent/${id}`,
   });
 }
 

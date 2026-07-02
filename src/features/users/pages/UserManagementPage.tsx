@@ -1,8 +1,11 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { paginateClientSide } from '@/features/search/lib/clientSearch';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import { Button } from '@/shared/components/ui/button';
+import { Dialog } from '@/shared/components/ui/dialog';
 import { Panel } from '@/shared/components/ui/panel';
 import { queryClient } from '@/shared/api/queryClient';
 import { ApiError } from '@/shared/api/errors';
@@ -11,7 +14,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/shared/layout/DataState'
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { PaginationBar } from '@/shared/layout/PaginationBar';
 import { cn } from '@/shared/lib/utils';
-import { createUser, deleteUser, getUser, listUsers, restoreUser, updateUser, updateUserPassword } from '../api/usersApi';
+import { createUser, deleteUser, getUser, listUsers, permanentDeleteSelf, restoreUser, updateUser, updateUserPassword } from '../api/usersApi';
 import { CreateUserDialog, EditUserDialog, PasswordDialog } from '../components/UserDialogs';
 import { UserTable } from '../components/UserTable';
 import type { ManageableRole, UserDto, UserSummaryDto } from '../types';
@@ -26,18 +29,34 @@ const roles: { value: ManageableRole; label: string }[] = [
 const FETCH_ALL_PAGE_SIZE = 500;
 
 export function UserManagementPage() {
+  const navigate = useNavigate();
+  const { user: currentUser, clearSession } = useAuthStore();
+
   const [role, setRole] = useState<ManageableRole>('explorer');
   const [page, setPage] = useState(1);
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const [selected, setSelected] = useState<UserSummaryDto | null>(null);
   const [dialog, setDialog] = useState<'create' | 'edit' | 'password' | null>(null);
+  const [confirmSelfDelete, setConfirmSelfDelete] = useState(false);
 
-  // Normal (active-only) view: server-paginated as before.
-  const usersQuery = useQuery({
-    queryKey: ['users', role, page],
-    queryFn: () => listUsers(role, page, 10, false),
+  // Normal (active-only) view: fetch all at once and paginate client-side.
+  // GET /User returns every role mixed together — the backend's /explorers,
+  // /vendors, /admins routes all share the same unfiltered handler body, so
+  // role filtering only happens in filterRolePage() on the frontend. Fetching
+  // just page N and filtering that page produces empty results whenever the
+  // requested role's records don't fall in that slice (e.g. page 1 is all
+  // explorers → vendors appear empty). Pulling 500 at once and re-paginating
+  // the filtered set client-side fixes this.
+  const allActiveUsersQuery = useQuery({
+    queryKey: ['users', role, 'all-active'],
+    queryFn: () => listUsers(role, 1, FETCH_ALL_PAGE_SIZE, false),
     enabled: !includeDeleted,
   });
+
+  const activeResult = useMemo(
+    () => paginateClientSide(allActiveUsersQuery.data?.items ?? [], page, 10),
+    [allActiveUsersQuery.data, page],
+  );
 
   // "Include deleted" view: the *-include-deleted endpoints return active and
   // deleted users mixed together with no isDeleted flag on either side, so
@@ -69,16 +88,16 @@ export function UserManagementPage() {
 
   const isDeletedViewLoading = allIncludingDeletedQuery.isLoading || activeUsersQuery.isLoading;
   const isDeletedViewError = allIncludingDeletedQuery.isError || activeUsersQuery.isError;
-  const result = includeDeleted ? deletedOnlyResult : usersQuery.data;
-  const isLoading = includeDeleted ? isDeletedViewLoading : usersQuery.isLoading;
-  const isError = includeDeleted ? isDeletedViewError : usersQuery.isError;
+  const result = includeDeleted ? deletedOnlyResult : activeResult;
+  const isLoading = includeDeleted ? isDeletedViewLoading : allActiveUsersQuery.isLoading;
+  const isError = includeDeleted ? isDeletedViewError : allActiveUsersQuery.isError;
 
   function refetchCurrentView() {
     if (includeDeleted) {
       void allIncludingDeletedQuery.refetch();
       void activeUsersQuery.refetch();
     } else {
-      void usersQuery.refetch();
+      void allActiveUsersQuery.refetch();
     }
   }
 
@@ -129,6 +148,20 @@ export function UserManagementPage() {
     mutationFn: (user: UserSummaryDto) => restoreUser(role, user.id),
     onSuccess: () => void invalidate(),
     onError: toastOnError,
+  });
+
+  const permanentDeleteSelfMutation = useMutation({
+    mutationFn: () => permanentDeleteSelf(currentUser?.id ?? ''),
+    onSuccess: () => {
+      setConfirmSelfDelete(false);
+      clearSession();
+      queryClient.clear();
+      void navigate('/login', { replace: true });
+    },
+    onError: (error) => {
+      setConfirmSelfDelete(false);
+      toastOnError(error);
+    },
   });
 
   function changeRole(nextRole: string) {
@@ -194,6 +227,7 @@ export function UserManagementPage() {
         <Panel className="overflow-hidden">
           <UserTable
             users={result.items}
+            currentUserId={currentUser?.id}
             onEdit={(user) => {
               setSelected(user);
               setDialog('edit');
@@ -204,6 +238,7 @@ export function UserManagementPage() {
             }}
             onDelete={(user) => void deleteMutation.mutate(user)}
             onRestore={(user) => void restoreMutation.mutate(user)}
+            onPermanentDelete={() => setConfirmSelfDelete(true)}
           />
           <PaginationBar page={page} result={result} onPageChange={setPage} />
         </Panel>
@@ -230,6 +265,27 @@ export function UserManagementPage() {
         onOpenChange={(open) => setDialog(open ? 'password' : null)}
         onSubmit={(values) => passwordMutation.mutateAsync(values)}
       />
+
+      <Dialog
+        open={confirmSelfDelete}
+        onOpenChange={(open) => { if (!open) setConfirmSelfDelete(false); }}
+        title="Permanently delete your account?"
+        description="This cannot be undone. Your admin account will be removed from the database entirely, your session will end immediately, and you will not be able to log back in."
+      >
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="ghost" onClick={() => setConfirmSelfDelete(false)}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            className="bg-error text-on-error hover:bg-error/90"
+            disabled={permanentDeleteSelfMutation.isPending}
+            onClick={() => permanentDeleteSelfMutation.mutate()}
+          >
+            Delete my account permanently
+          </Button>
+        </div>
+      </Dialog>
     </>
   );
 }

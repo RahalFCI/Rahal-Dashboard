@@ -27,6 +27,20 @@ export function getCheckInsByPlace(placeId: string, page: number, pageSize: numb
   });
 }
 
+export type ValidationStatus = 'Pending' | 'Verified' | 'Failed';
+
+export interface UpdateCheckInDto {
+  validationStatus: ValidationStatus;
+}
+
+export function updateCheckIn(explorerId: string, placeId: string, dto: UpdateCheckInDto) {
+  return apiClient<GetCheckInDto>({
+    method: 'PUT',
+    url: `/CheckIn/${explorerId}/${placeId}`,
+    data: dto,
+  });
+}
+
 // Same missing-Include gap as listCheckIns/getCheckInsByPlace - placeName is
 // empty for every row, and unlike getCheckInsByPlace there's no NotFound
 // branch here (always resolves to a page, even an empty one).
@@ -36,6 +50,10 @@ export function getCheckInsByExplorerId(explorerId: string, page: number, pageSi
     url: `/CheckIn/explorer/${explorerId}`,
     params: { page, pageSize },
   });
+}
+
+export function deleteCheckIn(explorerId: string, placeId: string) {
+  return apiClient<string>({ method: 'DELETE', url: `/CheckIn/${explorerId}/${placeId}` });
 }
 
 // Same missing-Include gap as the other list endpoints - placeName is empty

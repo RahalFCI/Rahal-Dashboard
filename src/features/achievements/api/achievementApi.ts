@@ -110,3 +110,7 @@ export function deleteAchievement(id: string) {
 export function restoreAchievement(id: string) {
   return apiClient<string>({ method: 'POST', url: `/Achievement/${id}/restore` });
 }
+
+export function permanentDeleteAchievement(id: string) {
+  return apiClient<string>({ method: 'DELETE', url: `/Achievement/${id}/permanent` });
+}

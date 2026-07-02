@@ -1,16 +1,16 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Eye, Info, Trash2, Users } from 'lucide-react';
+import { Eye, Info, Trash, Trash2, Users } from 'lucide-react';
 import { useState } from 'react';
 import { ApiError } from '@/shared/api/errors';
 import { queryClient } from '@/shared/api/queryClient';
-import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
+import { Dialog } from '@/shared/components/ui/dialog';
 import { Panel } from '@/shared/components/ui/panel';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/layout/DataState';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { PaginationBar } from '@/shared/layout/PaginationBar';
 import { useToastStore } from '@/shared/stores/toastStore';
-import { deleteExplorerAchievement, listExplorerAchievements, restoreExplorerAchievement } from '../api/explorerAchievementApi';
+import { deleteExplorerAchievement, listExplorerAchievements, permanentDeleteExplorerAchievement, restoreExplorerAchievement } from '../api/explorerAchievementApi';
 import { AchievementEarnersDialog } from '../components/AchievementEarnersDialog';
 import { ExplorerAchievementDetailDialog } from '../components/ExplorerAchievementDetailDialog';
 import { ExplorerAchievementsDialog } from '../components/ExplorerAchievementsDialog';
@@ -20,6 +20,7 @@ export function ExplorerAchievementsPage() {
   const [viewExplorerId, setViewExplorerId] = useState<string | null>(null);
   const [viewAchievement, setViewAchievement] = useState<{ id: string; title: string } | null>(null);
   const [viewRecordId, setViewRecordId] = useState<string | null>(null);
+  const [confirmPermanentDeleteId, setConfirmPermanentDeleteId] = useState<string | null>(null);
 
   const achievementsQuery = useQuery({
     queryKey: ['explorer-achievements', page],
@@ -36,6 +37,19 @@ export function ExplorerAchievementsPage() {
     mutationFn: (id: string) => restoreExplorerAchievement(id),
     onSuccess: invalidate,
     onError: toastOnError,
+  });
+
+  const permanentDeleteMutation = useMutation({
+    mutationFn: (id: string) => permanentDeleteExplorerAchievement(id),
+    onSuccess: () => {
+      setConfirmPermanentDeleteId(null);
+      invalidate();
+      useToastStore.getState().add({ message: 'Achievement permanently deleted.', variant: 'success' });
+    },
+    onError: (error) => {
+      setConfirmPermanentDeleteId(null);
+      toastOnError(error);
+    },
   });
 
   const deleteMutation = useMutation({
@@ -75,7 +89,6 @@ export function ExplorerAchievementsPage() {
                   <th className="px-4 py-3">Achievement</th>
                   <th className="px-4 py-3">Explorer</th>
                   <th className="px-4 py-3">Earned at</th>
-                  <th className="px-4 py-3">Notified</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -83,15 +96,10 @@ export function ExplorerAchievementsPage() {
                 {achievementsQuery.data.items.map((earned) => (
                   <tr key={earned.id} className="border-t border-outline/40">
                     <td className="px-4 py-3 font-medium">{earned.achievementTitle}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-on-surface-variant" title={earned.explorerId}>
-                      {earned.explorerId.slice(0, 8)}…
+                    <td className="px-4 py-3 font-medium" title={earned.explorerId}>
+                      {earned.explorerName || 'Unknown explorer'}
                     </td>
                     <td className="px-4 py-3 text-on-surface-variant">{new Date(earned.earnedAt).toLocaleString()}</td>
-                    <td className="px-4 py-3">
-                      <Badge className={earned.isNotified ? 'bg-green-100 text-green-700' : ''}>
-                        {earned.isNotified ? 'Notified' : 'Pending'}
-                      </Badge>
-                    </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end">
                         <Button
@@ -130,6 +138,16 @@ export function ExplorerAchievementsPage() {
                         >
                           <Trash2 size={16} />
                         </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Permanently delete this earned achievement"
+                          className="text-error hover:text-error"
+                          onClick={() => setConfirmPermanentDeleteId(earned.id)}
+                        >
+                          <Trash size={16} />
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -143,6 +161,7 @@ export function ExplorerAchievementsPage() {
 
       <ExplorerAchievementsDialog
         explorerId={viewExplorerId}
+        explorerName={achievementsQuery.data?.items.find((e) => e.explorerId === viewExplorerId)?.explorerName}
         open={viewExplorerId !== null}
         onOpenChange={(open) => {
           if (!open) setViewExplorerId(null);
@@ -165,6 +184,27 @@ export function ExplorerAchievementsPage() {
           if (!open) setViewRecordId(null);
         }}
       />
+
+      <Dialog
+        open={confirmPermanentDeleteId !== null}
+        onOpenChange={(open) => { if (!open) setConfirmPermanentDeleteId(null); }}
+        title="Permanently delete achievement?"
+        description="This cannot be undone. The earned achievement record will be removed from the database entirely and cannot be restored."
+      >
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="ghost" onClick={() => setConfirmPermanentDeleteId(null)}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            className="bg-error text-on-error hover:bg-error/90"
+            disabled={permanentDeleteMutation.isPending}
+            onClick={() => confirmPermanentDeleteId && permanentDeleteMutation.mutate(confirmPermanentDeleteId)}
+          >
+            Delete permanently
+          </Button>
+        </div>
+      </Dialog>
     </>
   );
 }

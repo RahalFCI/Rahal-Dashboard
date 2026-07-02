@@ -5,12 +5,16 @@ import { RegisterPage } from '@/features/auth/pages/RegisterPage';
 import { AchievementsPage } from '@/features/achievements/pages/AchievementsPage';
 import { BadgesPage } from '@/features/badges/pages/BadgesPage';
 import { ChallengesPage } from '@/features/challenges/pages/ChallengesPage';
+import { CouponsPage } from '@/features/coupons/pages/CouponsPage';
 import { CheckInChallengesPage } from '@/features/checkInChallenges/pages/CheckInChallengesPage';
 import { CheckInsPage } from '@/features/checkIns/pages/CheckInsPage';
 import { ExplorerAchievementsPage } from '@/features/explorerAchievements/pages/ExplorerAchievementsPage';
 import { PlacesPage } from '@/features/places/pages/PlacesPage';
 import { SearchPage } from '@/features/search/pages/SearchPage';
 import { UserStatsPage } from '@/features/userStats/pages/UserStatsPage';
+import { PlanTiersPage } from '@/features/planTiers/pages/PlanTiersPage';
+import { RedeemCouponPage } from '@/features/userCoupons/pages/RedeemCouponPage';
+import { UserCouponLookupPage } from '@/features/userCoupons/pages/UserCouponLookupPage';
 import { VendorDashboardPage } from '@/features/vendors/pages/VendorDashboardPage';
 import { VendorPlaceDetailPage } from '@/features/vendors/pages/VendorPlaceDetailPage';
 import { VendorPlacesPage } from '@/features/vendors/pages/VendorPlacesPage';
@@ -124,6 +128,30 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: 'admin/coupons',
+        element: (
+          <RequireAuth roles={['Admin']}>
+            <CouponsPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'admin/plan-tiers',
+        element: (
+          <RequireAuth roles={['Admin']}>
+            <PlanTiersPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'admin/user-coupon-lookup',
+        element: (
+          <RequireAuth roles={['Admin']}>
+            <UserCouponLookupPage />
+          </RequireAuth>
+        ),
+      },
+      {
         path: 'vendor/dashboard',
         element: (
           <RequireAuth roles={['Vendor']}>
@@ -152,6 +180,14 @@ const router = createBrowserRouter([
         element: (
           <RequireAuth roles={['Vendor']}>
             <VendorPlaceDetailPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'vendor/redeem',
+        element: (
+          <RequireAuth roles={['Vendor']}>
+            <RedeemCouponPage />
           </RequireAuth>
         ),
       },

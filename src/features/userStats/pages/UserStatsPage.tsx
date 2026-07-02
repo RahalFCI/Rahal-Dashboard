@@ -59,8 +59,8 @@ export function UserStatsPage() {
               <tbody>
                 {statsQuery.data.items.map((stat) => (
                   <tr key={stat.id} className="border-t border-outline/40">
-                    <td className="px-4 py-3 font-mono text-xs text-on-surface-variant" title={stat.explorerId}>
-                      {stat.explorerId.slice(0, 8)}…
+                    <td className="px-4 py-3 font-medium" title={stat.explorerId}>
+                      {stat.explorerName || 'Unknown explorer'}
                     </td>
                     <td className="px-4 py-3">{stat.availableXp.toLocaleString()}</td>
                     <td className="px-4 py-3">{stat.cumulativeXp.toLocaleString()}</td>
@@ -132,6 +132,7 @@ export function UserStatsPage() {
 
       <XpTransactionsDialog
         explorerId={viewXpExplorerId}
+        explorerName={statsQuery.data?.items.find((s) => s.explorerId === viewXpExplorerId)?.explorerName}
         open={viewXpExplorerId !== null}
         onOpenChange={(open) => {
           if (!open) setViewXpExplorerId(null);
@@ -140,6 +141,7 @@ export function UserStatsPage() {
 
       <ExplorerCheckInsDialog
         explorerId={viewCheckInsExplorerId}
+        explorerName={statsQuery.data?.items.find((s) => s.explorerId === viewCheckInsExplorerId)?.explorerName}
         open={viewCheckInsExplorerId !== null}
         onOpenChange={(open) => {
           if (!open) setViewCheckInsExplorerId(null);
@@ -148,6 +150,7 @@ export function UserStatsPage() {
 
       <ExplorerReviewsDialog
         explorerId={viewReviewsExplorerId}
+        explorerName={statsQuery.data?.items.find((s) => s.explorerId === viewReviewsExplorerId)?.explorerName}
         open={viewReviewsExplorerId !== null}
         onOpenChange={(open) => {
           if (!open) setViewReviewsExplorerId(null);

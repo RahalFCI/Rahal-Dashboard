@@ -6,6 +6,7 @@ import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Dialog } from '@/shared/components/ui/dialog';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/layout/DataState';
+import { useExplorerNames } from '@/shared/hooks/useExplorerNames';
 import { deleteReview, getReviewsByPlaceId, getVerifiedReviewsByPlaceId } from '../api/placeReviewApi';
 import { ReviewDetailDialog } from './ReviewDetailDialog';
 
@@ -38,6 +39,8 @@ export function PlaceReviewsDialog({ placeId, placeName, open, onOpenChange }: P
     mutationFn: (key: ReviewKey) => deleteReview(key.explorerId, key.placeId, key.checkInId),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['place-reviews'] }),
   });
+
+  const explorerNameById = useExplorerNames((reviewsQuery.data ?? []).map((review) => review.explorerId), open);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title={placeName ? `Reviews at ${placeName}` : 'Reviews at this place'}>
@@ -87,8 +90,8 @@ export function PlaceReviewsDialog({ placeId, placeName, open, onOpenChange }: P
             <tbody>
               {reviewsQuery.data.map((review) => (
                 <tr key={`${review.explorerId}-${review.checkInId}`} className="border-t border-outline/40">
-                  <td className="px-4 py-3 font-mono text-xs text-on-surface-variant" title={review.explorerId}>
-                    {review.explorerId.slice(0, 8)}…
+                  <td className="px-4 py-3 font-medium" title={review.explorerId}>
+                    {explorerNameById.get(review.explorerId) || 'Unknown explorer'}
                   </td>
                   <td className="px-4 py-3">
                     <span className="flex items-center gap-1">
@@ -145,6 +148,7 @@ export function PlaceReviewsDialog({ placeId, placeName, open, onOpenChange }: P
 
       <ReviewDetailDialog
         reviewKey={viewReviewKey}
+        explorerName={viewReviewKey ? explorerNameById.get(viewReviewKey.explorerId) : undefined}
         open={viewReviewKey !== null}
         onOpenChange={(open) => {
           if (!open) setViewReviewKey(null);

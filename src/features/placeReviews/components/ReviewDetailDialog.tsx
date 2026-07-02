@@ -14,11 +14,12 @@ interface ReviewKey {
 
 interface ReviewDetailDialogProps {
   reviewKey: ReviewKey | null;
+  explorerName?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function ReviewDetailDialog({ reviewKey, open, onOpenChange }: ReviewDetailDialogProps) {
+export function ReviewDetailDialog({ reviewKey, explorerName, open, onOpenChange }: ReviewDetailDialogProps) {
   const reviewQuery = useQuery({
     queryKey: ['place-review', reviewKey?.explorerId, reviewKey?.placeId, reviewKey?.checkInId],
     queryFn: () => getReview(reviewKey!.explorerId, reviewKey!.placeId, reviewKey!.checkInId),
@@ -53,9 +54,9 @@ export function ReviewDetailDialog({ reviewKey, open, onOpenChange }: ReviewDeta
             <p className="mt-1 text-on-surface">{reviewQuery.data.comment}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-[0.14em] text-on-surface-variant">Explorer ID</p>
-            <p className="mt-1 font-mono text-xs text-on-surface-variant" title={reviewQuery.data.explorerId}>
-              {reviewQuery.data.explorerId}
+            <p className="text-xs uppercase tracking-[0.14em] text-on-surface-variant">Explorer</p>
+            <p className="mt-1 font-medium text-on-surface" title={reviewQuery.data.explorerId}>
+              {explorerName || 'Unknown explorer'}
             </p>
           </div>
           <div>

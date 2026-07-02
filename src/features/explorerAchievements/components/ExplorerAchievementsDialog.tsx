@@ -8,11 +8,12 @@ import { getExplorerAchievementsByExplorerId } from '../api/explorerAchievementA
 
 interface ExplorerAchievementsDialogProps {
   explorerId: string | null;
+  explorerName?: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function ExplorerAchievementsDialog({ explorerId, open, onOpenChange }: ExplorerAchievementsDialogProps) {
+export function ExplorerAchievementsDialog({ explorerId, explorerName, open, onOpenChange }: ExplorerAchievementsDialogProps) {
   const [page, setPage] = useState(1);
 
   // Reset to page 1 whenever a new explorer is opened, without an effect
@@ -35,7 +36,7 @@ export function ExplorerAchievementsDialog({ explorerId, open, onOpenChange }: E
       open={open}
       onOpenChange={onOpenChange}
       title="Achievements for this explorer"
-      description={explorerId ?? undefined}
+      description={explorerName || explorerId || undefined}
     >
       {achievementsQuery.isLoading ? <LoadingState /> : null}
       {achievementsQuery.isError ? <ErrorState onRetry={() => void achievementsQuery.refetch()} /> : null}

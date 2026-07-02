@@ -4,21 +4,23 @@ import {
   useReactTable,
   type ColumnDef,
 } from '@tanstack/react-table';
-import { Edit, KeyRound, RotateCcw, Trash2 } from 'lucide-react';
+import { Edit, KeyRound, RotateCcw, Trash, Trash2 } from 'lucide-react';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import type { UserSummaryDto } from '../types';
 
 interface UserTableProps {
   users: UserSummaryDto[];
+  currentUserId?: string;
   onEdit?: (user: UserSummaryDto) => void;
   onPassword?: (user: UserSummaryDto) => void;
   onDelete?: (user: UserSummaryDto) => void;
   onRestore?: (user: UserSummaryDto) => void;
+  onPermanentDelete?: (user: UserSummaryDto) => void;
 }
 
-export function UserTable({ users, onEdit, onPassword, onDelete, onRestore }: UserTableProps) {
-  const hasActions = Boolean(onEdit || onPassword || onDelete || onRestore);
+export function UserTable({ users, currentUserId, onEdit, onPassword, onDelete, onRestore, onPermanentDelete }: UserTableProps) {
+  const hasActions = Boolean(onEdit || onPassword || onDelete || onRestore || onPermanentDelete);
   const columns: ColumnDef<UserSummaryDto>[] = [
     {
       header: 'Name',
@@ -75,6 +77,18 @@ export function UserTable({ users, onEdit, onPassword, onDelete, onRestore }: Us
             {!row.original.isDeleted && onDelete ? (
               <Button type="button" variant="ghost" size="icon" aria-label="Delete user" onClick={() => onDelete(row.original)}>
                 <Trash2 size={16} />
+              </Button>
+            ) : null}
+            {onPermanentDelete && row.original.id === currentUserId ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Permanently delete your account"
+                className="text-error hover:text-error"
+                onClick={() => onPermanentDelete(row.original)}
+              >
+                <Trash size={16} />
               </Button>
             ) : null}
           </div>
