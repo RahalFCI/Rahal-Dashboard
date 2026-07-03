@@ -10,6 +10,7 @@ import { CheckInChallengesPage } from '@/features/checkInChallenges/pages/CheckI
 import { CheckInsPage } from '@/features/checkIns/pages/CheckInsPage';
 import { ExplorerAchievementsPage } from '@/features/explorerAchievements/pages/ExplorerAchievementsPage';
 import { PlacesPage } from '@/features/places/pages/PlacesPage';
+import { ContentModerationPage } from '@/features/posts/pages/ContentModerationPage';
 import { SearchPage } from '@/features/search/pages/SearchPage';
 import { UserStatsPage } from '@/features/userStats/pages/UserStatsPage';
 import { PlanTiersPage } from '@/features/planTiers/pages/PlanTiersPage';
@@ -148,6 +149,14 @@ const router = createBrowserRouter([
         element: (
           <RequireAuth roles={['Admin']}>
             <UserCouponLookupPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: 'admin/content-moderation',
+        element: (
+          <RequireAuth roles={['Admin']}>
+            <ContentModerationPage />
           </RequireAuth>
         ),
       },
