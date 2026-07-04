@@ -1,14 +1,14 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Edit, Info, Medal, Plus, Trash, Trash2 } from 'lucide-react';
+import { Edit, Info, Medal, Plus, Search, Trash, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { matchesQuery, paginateClientSide } from '@/features/search/lib/clientSearch';
 import { ApiError } from '@/shared/api/errors';
 import { Button } from '@/shared/components/ui/button';
+import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { Dialog } from '@/shared/components/ui/dialog';
-import { Input } from '@/shared/components/ui/input';
-import { Label } from '@/shared/components/ui/label';
 import { Panel } from '@/shared/components/ui/panel';
 import { queryClient } from '@/shared/api/queryClient';
+import { cn } from '@/shared/lib/utils';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/layout/DataState';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { PaginationBar } from '@/shared/layout/PaginationBar';
@@ -28,6 +28,7 @@ export function BadgesPage() {
   const [viewBadgeId, setViewBadgeId] = useState<string | null>(null);
   const [nameFilter, setNameFilter] = useState('');
   const [confirmPermanentDeleteId, setConfirmPermanentDeleteId] = useState<string | null>(null);
+  const [confirmDeleteBadge, setConfirmDeleteBadge] = useState<GetBadgeDto | null>(null);
 
   // GET /Badge/name/{name} (exposed as getBadgeByName) only does an exact,
   // case-sensitive match, so it can't power a type-as-you-go, case-insensitive
@@ -113,28 +114,41 @@ export function BadgesPage() {
         title="Badges"
         description="Gamification badges explorers can earn across the platform."
         actions={
-          <Button
-            type="button"
-            onClick={() => {
-              setSelectedBadge(null);
-              setBadgeDialogOpen(true);
-            }}
-          >
-            <Plus size={17} />
-            New badge
-          </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative w-full sm:w-72">
+              <input
+                id="badge-name-filter"
+                type="text"
+                aria-label="Filter badges by name"
+                placeholder="Search..."
+                value={nameFilter}
+                onChange={(event) => changeNameFilter(event.target.value)}
+                className={cn(
+                  'w-full rounded-full border-none bg-surface py-3 pl-6 pr-12 text-sm text-on-surface-variant/80 outline-none',
+                  'placeholder:text-on-surface-variant/50',
+                  'shadow-[6px_6px_12px_#d1c5b2,-6px_-6px_12px_#ffffff] transition-shadow duration-200',
+                  'focus:shadow-[inset_3px_3px_6px_#d1c5b2,inset_-3px_-3px_6px_#ffffff]',
+                )}
+              />
+              <Search
+                size={16}
+                strokeWidth={1.5}
+                className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-on-surface-variant/50"
+              />
+            </div>
+            <Button
+              type="button"
+              onClick={() => {
+                setSelectedBadge(null);
+                setBadgeDialogOpen(true);
+              }}
+            >
+              <Plus size={17} />
+              New badge
+            </Button>
+          </div>
         }
       />
-
-      <Panel className="mb-4 p-4">
-        <Label htmlFor="badge-name-filter">Filter badges by name</Label>
-        <Input
-          id="badge-name-filter"
-          placeholder="Type to filter, e.g. explorer"
-          value={nameFilter}
-          onChange={(event) => changeNameFilter(event.target.value)}
-        />
-      </Panel>
 
       {activeBadgesQuery.isLoading ? <LoadingState /> : null}
       {activeBadgesQuery.isError ? <ErrorState onRetry={() => void activeBadgesQuery.refetch()} /> : null}
@@ -210,7 +224,7 @@ export function BadgesPage() {
                           variant="ghost"
                           size="icon"
                           aria-label="Delete badge"
-                          onClick={() => void deleteBadgeMutation.mutate(badge.id)}
+                          onClick={() => setConfirmDeleteBadge(badge)}
                         >
                           <Trash2 size={16} />
                         </Button>
@@ -277,6 +291,18 @@ export function BadgesPage() {
           </Button>
         </div>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmDeleteBadge !== null}
+        title={confirmDeleteBadge ? `Delete "${confirmDeleteBadge.name}"?` : 'Delete badge?'}
+        description="You can undo this from the toast that appears after deleting."
+        isConfirming={deleteBadgeMutation.isPending}
+        onConfirm={() => {
+          if (confirmDeleteBadge) deleteBadgeMutation.mutate(confirmDeleteBadge.id);
+          setConfirmDeleteBadge(null);
+        }}
+        onCancel={() => setConfirmDeleteBadge(null)}
+      />
     </>
   );
 }

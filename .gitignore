@@ -26,3 +26,6 @@ dist-ssr
 # Graphify output
 graphify-out/
 
+# Environment variables
+.env
+

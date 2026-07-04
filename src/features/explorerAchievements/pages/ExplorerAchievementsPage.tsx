@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ApiError } from '@/shared/api/errors';
 import { queryClient } from '@/shared/api/queryClient';
 import { Button } from '@/shared/components/ui/button';
+import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { Dialog } from '@/shared/components/ui/dialog';
 import { Panel } from '@/shared/components/ui/panel';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/layout/DataState';
@@ -21,6 +22,7 @@ export function ExplorerAchievementsPage() {
   const [viewAchievement, setViewAchievement] = useState<{ id: string; title: string } | null>(null);
   const [viewRecordId, setViewRecordId] = useState<string | null>(null);
   const [confirmPermanentDeleteId, setConfirmPermanentDeleteId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const achievementsQuery = useQuery({
     queryKey: ['explorer-achievements', page],
@@ -55,6 +57,7 @@ export function ExplorerAchievementsPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteExplorerAchievement(id),
     onSuccess: (_data, id) => {
+      setConfirmDeleteId(null);
       invalidate();
       // No "list deleted" endpoint exists for this resource, so this Undo
       // button is the only way to reach POST /ExplorerAchievement/{id}/restore.
@@ -64,7 +67,10 @@ export function ExplorerAchievementsPage() {
         action: { label: 'Undo', onClick: () => restoreMutation.mutate(id) },
       });
     },
-    onError: toastOnError,
+    onError: (error) => {
+      setConfirmDeleteId(null);
+      toastOnError(error);
+    },
   });
 
   return (
@@ -134,7 +140,7 @@ export function ExplorerAchievementsPage() {
                           variant="ghost"
                           size="icon"
                           aria-label="Delete this earned achievement"
-                          onClick={() => void deleteMutation.mutate(earned.id)}
+                          onClick={() => setConfirmDeleteId(earned.id)}
                         >
                           <Trash2 size={16} />
                         </Button>
@@ -183,6 +189,15 @@ export function ExplorerAchievementsPage() {
         onOpenChange={(open) => {
           if (!open) setViewRecordId(null);
         }}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="Delete this earned achievement?"
+        description="You can undo this from the toast that appears right after deleting."
+        isConfirming={deleteMutation.isPending}
+        onConfirm={() => confirmDeleteId && deleteMutation.mutate(confirmDeleteId)}
+        onCancel={() => setConfirmDeleteId(null)}
       />
 
       <Dialog

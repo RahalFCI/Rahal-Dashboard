@@ -1,9 +1,11 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { CheckCircle, Trash2, XCircle } from 'lucide-react';
+import { useState } from 'react';
 import { ApiError } from '@/shared/api/errors';
 import { queryClient } from '@/shared/api/queryClient';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
+import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { Dialog } from '@/shared/components/ui/dialog';
 import { Panel } from '@/shared/components/ui/panel';
 import { ErrorState, LoadingState } from '@/shared/layout/DataState';
@@ -24,6 +26,8 @@ const statusBadgeClass: Record<string, string> = {
 };
 
 export function CheckInDetailDialog({ explorerId, explorerName, placeId, open, onOpenChange }: CheckInDetailDialogProps) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
   const checkInQuery = useQuery({
     queryKey: ['check-in', explorerId, placeId],
     queryFn: () => getCheckIn(explorerId!, placeId!),
@@ -33,11 +37,13 @@ export function CheckInDetailDialog({ explorerId, explorerName, placeId, open, o
   const deleteMutation = useMutation({
     mutationFn: () => deleteCheckIn(explorerId!, placeId!),
     onSuccess: () => {
+      setConfirmDelete(false);
       void queryClient.invalidateQueries({ queryKey: ['check-ins'] });
       useToastStore.getState().add({ message: 'Check-in deleted.', variant: 'success' });
       onOpenChange(false);
     },
     onError: (error) => {
+      setConfirmDelete(false);
       if (error instanceof ApiError) useToastStore.getState().add({ message: error.message, variant: 'error' });
     },
   });
@@ -108,13 +114,22 @@ export function CheckInDetailDialog({ explorerId, explorerName, placeId, open, o
               size="icon"
               aria-label="Delete check-in"
               disabled={deleteMutation.isPending}
-              onClick={() => deleteMutation.mutate()}
+              onClick={() => setConfirmDelete(true)}
             >
               <Trash2 size={16} />
             </Button>
           </div>
         </Panel>
       ) : null}
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title="Delete this check-in?"
+        description="This can be undone."
+        isConfirming={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate()}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </Dialog>
   );
 }

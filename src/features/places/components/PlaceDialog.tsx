@@ -21,8 +21,8 @@ interface PlaceDialogProps {
   // creating the place is not undone in that case (see PlacesPage), so the
   // dialog switches into a small retry-only view instead of losing the record.
   createdPlaceId?: string | null;
-  onRetryPhoto: (photo: File) => Promise<unknown>;
-  onSkipPhoto: () => void;
+  onRetryPhoto?: (photo: File) => Promise<unknown>;
+  onSkipPhoto?: () => void;
   photoError?: string | null;
   isSubmittingPhoto?: boolean;
 }
@@ -107,7 +107,7 @@ export function PlaceDialog({
             <Button
               type="button"
               disabled={!retryPhoto || isSubmittingPhoto}
-              onClick={() => retryPhoto && onRetryPhoto(retryPhoto)}
+              onClick={() => retryPhoto && onRetryPhoto?.(retryPhoto)}
             >
               Upload photo
             </Button>

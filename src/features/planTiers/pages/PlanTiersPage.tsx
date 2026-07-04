@@ -5,6 +5,7 @@ import { ApiError } from '@/shared/api/errors';
 import { queryClient } from '@/shared/api/queryClient';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
+import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { Dialog } from '@/shared/components/ui/dialog';
 import { Panel } from '@/shared/components/ui/panel';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/layout/DataState';
@@ -29,6 +30,7 @@ export function PlanTiersPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editingTier, setEditingTier] = useState<GetPlanTierDto | null>(null);
   const [confirmPermanentDeleteId, setConfirmPermanentDeleteId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const [editServerError, setEditServerError] = useState<string | null>(null);
 
@@ -71,10 +73,14 @@ export function PlanTiersPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deletePlanTier(id),
     onSuccess: () => {
+      setConfirmDeleteId(null);
       void queryClient.invalidateQueries({ queryKey: ['plan-tiers'] });
       useToastStore.getState().add({ message: 'Plan tier deleted.', variant: 'success' });
     },
-    onError: toastOnError,
+    onError: (error) => {
+      setConfirmDeleteId(null);
+      toastOnError(error);
+    },
   });
 
   const permanentDeleteMutation = useMutation({
@@ -174,7 +180,7 @@ export function PlanTiersPage() {
                           variant="ghost"
                           size="icon"
                           aria-label="Soft delete tier"
-                          onClick={() => void deleteMutation.mutate(tier.id)}
+                          onClick={() => setConfirmDeleteId(tier.id)}
                         >
                           <Trash2 size={16} />
                         </Button>
@@ -216,6 +222,16 @@ export function PlanTiersPage() {
         onOpenChange={(open) => { if (!open) { setEditingTier(null); setEditServerError(null); } }}
         onSubmit={handleUpdate}
         serverError={editServerError}
+      />
+
+      {/* Soft delete confirmation */}
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="Delete tier?"
+        description="This tier has no restore option from this page - deleting it removes it from the active list."
+        isConfirming={deleteMutation.isPending}
+        onConfirm={() => confirmDeleteId && deleteMutation.mutate(confirmDeleteId)}
+        onCancel={() => setConfirmDeleteId(null)}
       />
 
       {/* Permanent delete confirmation */}

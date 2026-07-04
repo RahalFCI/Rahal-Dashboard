@@ -1,7 +1,9 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { ArrowLeft, ImagePlus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
+import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { Panel } from '@/shared/components/ui/panel';
@@ -20,6 +22,8 @@ export function VendorPlaceDetailPage() {
     enabled: Boolean(placeId),
   });
 
+  const [pendingDeleteUrl, setPendingDeleteUrl] = useState<string | null>(null);
+
   const invalidatePhotos = () => queryClient.invalidateQueries({ queryKey: ['place-photos', placeId] });
   const uploadMutation = useMutation({
     mutationFn: (file: File) => addPlacePhoto(placeId, file),
@@ -27,7 +31,10 @@ export function VendorPlaceDetailPage() {
   });
   const deleteMutation = useMutation({
     mutationFn: (url: string) => deletePlacePhoto(placeId, url),
-    onSuccess: () => void invalidatePhotos(),
+    onSuccess: () => {
+      setPendingDeleteUrl(null);
+      void invalidatePhotos();
+    },
   });
 
   function uploadSelectedFile() {
@@ -79,7 +86,7 @@ export function VendorPlaceDetailPage() {
                 {url ? <img src={resolveMediaUrl(url)} alt="" className="aspect-video w-full object-cover" /> : null}
                 <div className="flex items-center justify-between p-3">
                   <span className="truncate text-xs text-on-surface-variant">{url}</span>
-                  <Button type="button" variant="ghost" size="icon" aria-label="Delete photo" onClick={() => void deleteMutation.mutate(url)}>
+                  <Button type="button" variant="ghost" size="icon" aria-label="Delete photo" onClick={() => setPendingDeleteUrl(url)}>
                     <Trash2 size={16} />
                   </Button>
                 </div>
@@ -90,6 +97,15 @@ export function VendorPlaceDetailPage() {
       ) : (
         <Panel className="p-8 text-sm text-on-surface-variant">No photos have been uploaded for this place.</Panel>
       )}
+
+      <ConfirmDialog
+        open={pendingDeleteUrl !== null}
+        title="Delete this photo?"
+        description="This cannot be undone. The photo will be permanently removed from this place."
+        isConfirming={deleteMutation.isPending}
+        onCancel={() => setPendingDeleteUrl(null)}
+        onConfirm={() => pendingDeleteUrl && deleteMutation.mutate(pendingDeleteUrl)}
+      />
     </>
   );
 }

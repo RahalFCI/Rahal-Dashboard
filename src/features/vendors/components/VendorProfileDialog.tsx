@@ -8,9 +8,8 @@ import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { Select } from '@/shared/components/ui/select';
 import { Textarea } from '@/shared/components/ui/textarea';
-import type { GetPlaceCategoryDto } from '@/features/places/types';
 import { vendorProfileSchema, type VendorProfileFormValues } from '../schemas';
-import type { UpsertVendorProfileDto, VendorProfileDto, Weekday, WorkingHours } from '../types';
+import type { UpsertVendorProfileDto, VendorCategoryDto, VendorProfileDto, Weekday, WorkingHours } from '../types';
 
 const weekdays: Weekday[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -19,7 +18,7 @@ interface VendorProfileDialogProps {
   profile?: VendorProfileDto;
   userId?: string;
   title?: string;
-  categories: GetPlaceCategoryDto[];
+  categories: VendorCategoryDto[];
   isLoading: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (values: UpsertVendorProfileDto, profilePicture?: File | null) => Promise<void>;

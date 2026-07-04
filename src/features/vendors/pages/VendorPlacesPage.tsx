@@ -8,37 +8,47 @@ import { queryClient } from '@/shared/api/queryClient';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/layout/DataState';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { PaginationBar } from '@/shared/layout/PaginationBar';
-import { createPlace, deletePlace, listCategories, listPlaces, updatePlace } from '@/features/places/api/placesApi';
-import { PlaceDialog } from '@/features/places/components/PlaceDialog';
-import { PlaceTable } from '@/features/places/components/PlaceTable';
-import type { PlaceFormValues } from '@/features/places/schemas';
-import type { GetPlaceDto } from '@/features/places/types';
+import { useAuthStore } from '@/features/auth/store/authStore';
+import { createVendorBranch, deleteVendorBranch, listVendorBranches, updateVendorBranch } from '../api/vendorBranchApi';
+import { VendorBranchDialog } from '../components/VendorBranchDialog';
+import { VendorBranchTable } from '../components/VendorBranchTable';
+import type { VendorBranchFormValues } from '../schemas';
+import type { GetVendorBranchDto } from '../types';
 
 export function VendorPlacesPage() {
   const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
+  const vendorId = user?.id ?? '';
   const [page, setPage] = useState(1);
-  const [selected, setSelected] = useState<GetPlaceDto | null>(null);
+  const [selected, setSelected] = useState<GetVendorBranchDto | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const placesQuery = useQuery({ queryKey: ['vendor-places', page], queryFn: () => listPlaces(page, 10) });
-  const categoriesQuery = useQuery({ queryKey: ['categories'], queryFn: listCategories });
+  const branchesQuery = useQuery({
+    queryKey: ['vendor-branches', vendorId, page],
+    queryFn: () => listVendorBranches(vendorId, page, 10),
+    enabled: Boolean(vendorId),
+  });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['vendor-places'] });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['vendor-branches', vendorId] });
   const upsertMutation = useMutation({
-    mutationFn: (values: PlaceFormValues) => (selected ? updatePlace(selected.id, values) : createPlace(values)),
+    mutationFn: (values: VendorBranchFormValues) =>
+      selected ? updateVendorBranch(selected.id, values) : createVendorBranch({ ...values, vendorId }),
     onSuccess: () => {
       setDialogOpen(false);
       setSelected(null);
       void invalidate();
     },
   });
-  const deleteMutation = useMutation({ mutationFn: (place: GetPlaceDto) => deletePlace(place.id), onSuccess: () => void invalidate() });
+  const deleteMutation = useMutation({
+    mutationFn: (branch: GetVendorBranchDto) => deleteVendorBranch(branch.id),
+    onSuccess: () => void invalidate(),
+  });
 
   return (
     <>
       <PageHeader
         eyebrow="Vendor"
         title="Places"
-        description="Vendor-accessible place management using the current backend place endpoints."
+        description="Branch locations you manage, each backed by its own place listing."
         actions={
           <Button
             type="button"
@@ -48,33 +58,34 @@ export function VendorPlacesPage() {
             }}
           >
             <Plus size={17} />
-            New place
+            New branch
           </Button>
         }
       />
 
-      {placesQuery.isLoading ? <LoadingState /> : null}
-      {placesQuery.isError ? <ErrorState onRetry={() => void placesQuery.refetch()} /> : null}
-      {placesQuery.data?.items.length === 0 ? <EmptyState title="No places" description="Create a place record to begin." /> : null}
-      {placesQuery.data && placesQuery.data.items.length > 0 ? (
+      {branchesQuery.isLoading ? <LoadingState /> : null}
+      {branchesQuery.isError ? <ErrorState onRetry={() => void branchesQuery.refetch()} /> : null}
+      {branchesQuery.data?.items.length === 0 ? (
+        <EmptyState title="No branches" description="Create a branch to list a place under your profile." />
+      ) : null}
+      {branchesQuery.data && branchesQuery.data.items.length > 0 ? (
         <Panel className="overflow-hidden">
-          <PlaceTable
-            places={placesQuery.data.items}
-            onEdit={(place) => {
-              setSelected(place);
+          <VendorBranchTable
+            branches={branchesQuery.data.items}
+            onEdit={(branch) => {
+              setSelected(branch);
               setDialogOpen(true);
             }}
-            onDelete={(place) => void deleteMutation.mutate(place)}
-            onPhotos={(place) => navigate(`/vendor/places/${place.id}`)}
+            onDelete={(branch) => void deleteMutation.mutate(branch)}
+            onPhotos={(branch) => navigate(`/vendor/places/${branch.placeId}`)}
           />
-          <PaginationBar page={page} result={placesQuery.data} onPageChange={setPage} />
+          <PaginationBar page={page} result={branchesQuery.data} onPageChange={setPage} />
         </Panel>
       ) : null}
 
-      <PlaceDialog
+      <VendorBranchDialog
         open={dialogOpen}
-        place={selected}
-        categories={categoriesQuery.data ?? []}
+        branch={selected}
         onOpenChange={setDialogOpen}
         onSubmit={(values) => upsertMutation.mutateAsync(values)}
       />

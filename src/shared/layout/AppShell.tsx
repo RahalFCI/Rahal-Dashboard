@@ -4,6 +4,7 @@ import {
   Bell,
   Building2,
   CheckSquare,
+  CreditCard,
   FlagTriangleRight,
   FolderKanban,
   HelpCircle,
@@ -53,6 +54,7 @@ const navItems: NavItem[] = [
   { to: '/admin/coupons', label: 'Coupons', icon: <Ticket size={17} />, roles: ['Admin'] },
   { to: '/admin/user-coupon-lookup', label: 'Coupon lookup', icon: <ScanLine size={17} />, roles: ['Admin'] },
   { to: '/admin/content-moderation', label: 'Content moderation', icon: <ShieldAlert size={17} />, roles: ['Admin'] },
+  { to: '/admin/payments', label: 'Payments', icon: <CreditCard size={17} />, roles: ['Admin'] },
   { to: '/admin/plan-tiers', label: 'Plan tiers', icon: <Layers size={17} />, roles: ['Admin'] },
   { to: '/vendor/profile', label: 'Profile', icon: <LayoutDashboard size={17} />, roles: ['Vendor'] },
   { to: '/vendor/places', label: 'My Places', icon: <FolderKanban size={17} />, roles: ['Vendor'] },
@@ -69,10 +71,10 @@ function SidebarContent({
   onLogout: () => void;
 }) {
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col p-3">
       {/* Brand */}
-      <div className="flex items-center gap-3 px-5 py-5">
-        <span className="grid size-9 place-items-center rounded-lg bg-primary text-white">
+      <div className="flex items-center gap-3 px-3 py-4">
+        <span className="grid size-9 place-items-center rounded-xl bg-primary text-white">
           <Archive size={17} />
         </span>
         <div>
@@ -84,17 +86,17 @@ function SidebarContent({
       </div>
 
       {/* Nav */}
-      <nav className="mt-3 flex-1 space-y-0.5">
+      <nav className="mt-2 flex-1 space-y-1 overflow-y-auto px-1">
         {items.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
               cn(
-                'flex items-center gap-3 border-l-[3px] py-2.5 pl-[18px] pr-5 text-sm font-medium transition-colors',
+                'flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium transition-colors',
                 isActive
-                  ? 'border-l-primary bg-surface text-on-surface'
-                  : 'border-l-transparent text-on-surface-variant hover:bg-surface/60 hover:text-on-surface',
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'text-on-surface-variant hover:bg-surface-lowest/60 hover:text-on-surface',
               )
             }
           >
@@ -104,8 +106,11 @@ function SidebarContent({
         ))}
       </nav>
 
+      {/* Divider segmenting the footer from the nav list */}
+      <div className="mx-3 my-2 border-t border-outline-variant/30" />
+
       {/* Bottom: user + logout */}
-      <div className="border-t border-outline-variant/40 px-4 py-4 space-y-1">
+      <div className="px-2 pb-1 pt-2 space-y-1">
         {user && (
           <div className="px-3 py-2">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-on-surface-variant/60">
@@ -116,7 +121,7 @@ function SidebarContent({
         )}
         <button
           onClick={onLogout}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-on-surface-variant transition-colors hover:bg-surface hover:text-on-surface"
+          className="flex w-full items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium text-on-surface-variant transition-colors hover:bg-surface-lowest/60 hover:text-on-surface"
         >
           <LogOut size={16} />
           Sign out
@@ -146,7 +151,7 @@ export function AppShell() {
   return (
     <div className="min-h-screen bg-surface text-on-surface">
       {/* ── Desktop sidebar ── */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-sidebar bg-surface-low lg:block">
+      <aside className="fixed inset-y-3 left-3 z-30 hidden w-sidebar overflow-hidden rounded-[28px] border border-surface-lowest/60 bg-surface-low/60 shadow-ambient backdrop-blur-xl lg:block">
         <SidebarContent items={visibleItems} user={user} onLogout={() => void handleLogout()} />
       </aside>
 
@@ -161,8 +166,8 @@ export function AppShell() {
       {/* ── Mobile drawer ── */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-72 bg-surface-low transition-transform duration-300 lg:hidden',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full',
+          'fixed inset-y-3 left-3 z-50 w-72 overflow-hidden rounded-[28px] border border-surface-lowest/60 bg-surface-low/70 shadow-ambient backdrop-blur-xl transition-transform duration-300 lg:hidden',
+          mobileOpen ? 'translate-x-0' : '-translate-x-[120%]',
         )}
       >
         <button
@@ -175,7 +180,7 @@ export function AppShell() {
       </aside>
 
       {/* ── Main area ── */}
-      <div className="lg:pl-sidebar">
+      <div className="lg:pl-[264px]">
         {/* Sticky top header */}
         <header className="sticky top-0 z-20 flex h-14 items-center gap-4 border-b border-outline-variant/30 bg-surface/90 px-4 backdrop-blur-sm sm:px-6">
           {/* Mobile menu toggle */}
@@ -190,16 +195,6 @@ export function AppShell() {
           <p className="hidden shrink-0 text-sm font-semibold text-on-surface lg:block">
             Rahal <span className="text-on-surface-variant">{user?.role}</span>
           </p>
-
-          {/* Search bar */}
-          <div className="relative mx-auto w-full max-w-sm lg:ml-6 lg:mr-auto">
-            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant/60" />
-            <input
-              type="search"
-              placeholder="Search across everything..."
-              className="h-9 w-full rounded-full bg-surface-mid/70 pl-9 pr-4 text-sm text-on-surface outline-none placeholder:text-on-surface-variant/50 focus:bg-surface-mid focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
 
           {/* Right controls */}
           <div className="ml-auto flex shrink-0 items-center gap-1">

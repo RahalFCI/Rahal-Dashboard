@@ -5,6 +5,7 @@ import { Edit, Eye, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/shared/components/ui/button';
+import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { Dialog } from '@/shared/components/ui/dialog';
 import { FieldError } from '@/shared/components/ui/field-error';
 import { Input } from '@/shared/components/ui/input';
@@ -50,8 +51,13 @@ type PlacesView = 'places' | 'categories' | 'search' | 'nearby';
 const views: { value: PlacesView; label: string }[] = [
   { value: 'places', label: 'Places' },
   { value: 'categories', label: 'Categories' },
-  { value: 'search', label: 'Search' },
-  { value: 'nearby', label: 'Nearby places' },
+];
+
+type SearchMode = 'search' | 'nearby';
+
+const searchModes: { value: SearchMode; label: string }[] = [
+  { value: 'search', label: 'Search by Name' },
+  { value: 'nearby', label: 'Coordinate Search' },
 ];
 
 // Moved from the old cross-feature SearchPage: fetches everything once and
@@ -75,6 +81,7 @@ export function PlacesPage() {
   const [selectedCategory, setSelectedCategory] = useState<GetPlaceCategoryDto | null>(null);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [viewCategory, setViewCategory] = useState<GetPlaceCategoryDto | null>(null);
+  const [pendingDeleteCategory, setPendingDeleteCategory] = useState<GetPlaceCategoryDto | null>(null);
   const [viewCheckInsPlace, setViewCheckInsPlace] = useState<GetPlaceDto | null>(null);
   const [viewChallengesPlace, setViewChallengesPlace] = useState<GetPlaceDto | null>(null);
   const [viewReviewsPlace, setViewReviewsPlace] = useState<GetPlaceDto | null>(null);
@@ -83,6 +90,8 @@ export function PlacesPage() {
   const [searchPage, setSearchPage] = useState(1);
   const [locationParams, setLocationParams] = useState<LocationSearchValues | null>(null);
   const [nearbyPage, setNearbyPage] = useState(1);
+
+  const searchMode: SearchMode = view === 'nearby' ? 'nearby' : 'search';
 
   const placesQuery = useQuery({ queryKey: ['places', page], queryFn: () => listPlaces(page, 10), enabled: view === 'places' });
   const categoriesQuery = useQuery({ queryKey: ['categories'], queryFn: listCategories });
@@ -201,7 +210,10 @@ export function PlacesPage() {
 
   const deleteCategoryMutation = useMutation({
     mutationFn: (id: string) => deleteCategory(id),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['categories'] }),
+    onSuccess: () => {
+      setPendingDeleteCategory(null);
+      void queryClient.invalidateQueries({ queryKey: ['categories'] });
+    },
   });
 
   return (
@@ -239,26 +251,25 @@ export function PlacesPage() {
         }
       />
 
-      <Tabs.Root value={view} onValueChange={changeView}>
-        <Tabs.List className="mb-4 flex flex-wrap gap-2">
-          {views.map((item) => (
-            <Tabs.Trigger
-              key={item.value}
-              value={item.value}
+      <div className="mb-4">
+        <div className="mb-3 inline-flex gap-1 rounded-lg bg-surface-low p-1">
+          {searchModes.map((mode) => (
+            <button
+              key={mode.value}
+              type="button"
+              onClick={() => changeView(mode.value)}
               className={cn(
-                'focus-ring rounded-lg px-4 py-2 text-sm font-semibold text-on-surface-variant',
-                view === item.value && 'bg-primary text-white',
+                'focus-ring rounded-md px-3 py-1.5 text-sm font-semibold text-on-surface-variant transition-colors',
+                view === mode.value && 'bg-primary text-white',
               )}
             >
-              {item.label}
-            </Tabs.Trigger>
+              {mode.label}
+            </button>
           ))}
-        </Tabs.List>
-      </Tabs.Root>
+        </div>
 
-      {view === 'search' ? (
-        <>
-          <Panel className="mb-4 p-4">
+        <Panel className="p-4">
+          {searchMode === 'search' ? (
             <div className="flex items-end gap-2">
               <div className="flex-1">
                 <Input
@@ -282,8 +293,36 @@ export function PlacesPage() {
                 Refresh
               </Button>
             </div>
-          </Panel>
+          ) : (
+            <LocationSearchForm
+              onSubmit={(values) => {
+                setLocationParams(values);
+                setNearbyPage(1);
+              }}
+            />
+          )}
+        </Panel>
+      </div>
 
+      <Tabs.Root value={view} onValueChange={changeView}>
+        <Tabs.List className="mb-4 flex flex-wrap gap-2">
+          {views.map((item) => (
+            <Tabs.Trigger
+              key={item.value}
+              value={item.value}
+              className={cn(
+                'focus-ring rounded-lg px-4 py-2 text-sm font-semibold text-on-surface-variant',
+                view === item.value && 'bg-primary text-white',
+              )}
+            >
+              {item.label}
+            </Tabs.Trigger>
+          ))}
+        </Tabs.List>
+      </Tabs.Root>
+
+      {view === 'search' ? (
+        <>
           {placesSearchRawQuery.isLoading ? <LoadingState label="Loading records..." /> : null}
           {placesSearchRawQuery.isError ? <ErrorState onRetry={() => void placesSearchRawQuery.refetch()} /> : null}
           {!placesSearchRawQuery.isLoading && !placesSearchRawQuery.isError && searchQuery.length === 0 ? (
@@ -301,15 +340,6 @@ export function PlacesPage() {
         </>
       ) : view === 'nearby' ? (
         <>
-          <Panel className="mb-4 p-4">
-            <LocationSearchForm
-              onSubmit={(values) => {
-                setLocationParams(values);
-                setNearbyPage(1);
-              }}
-            />
-          </Panel>
-
           {nearbyQuery.isLoading ? <LoadingState label="Searching..." /> : null}
           {nearbyQuery.isError ? <ErrorState onRetry={() => void nearbyQuery.refetch()} /> : null}
           {!nearbyQuery.isLoading && !nearbyQuery.isError && locationParams === null ? (
@@ -400,7 +430,7 @@ export function PlacesPage() {
                             variant="ghost"
                             size="icon"
                             aria-label="Delete category"
-                            onClick={() => void deleteCategoryMutation.mutate(category.id)}
+                            onClick={() => setPendingDeleteCategory(category)}
                           >
                             <Trash2 size={16} />
                           </Button>
@@ -455,6 +485,15 @@ export function PlacesPage() {
           </div>
         </form>
       </Dialog>
+
+      <ConfirmDialog
+        open={pendingDeleteCategory !== null}
+        title={pendingDeleteCategory ? `Delete "${pendingDeleteCategory.name}"?` : 'Delete category?'}
+        description="This cannot be undone. The category will be permanently removed."
+        isConfirming={deleteCategoryMutation.isPending}
+        onCancel={() => setPendingDeleteCategory(null)}
+        onConfirm={() => pendingDeleteCategory && deleteCategoryMutation.mutate(pendingDeleteCategory.id)}
+      />
 
       <CategoryPlacesDialog
         category={viewCategory}
