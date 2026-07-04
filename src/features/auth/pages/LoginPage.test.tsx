@@ -38,7 +38,7 @@ describe('LoginPage', () => {
       </MemoryRouter>,
     );
 
-    await user.selectOptions(screen.getByLabelText('Workspace'), 'Admin');
+    await user.click(screen.getByRole('button', { name: 'Admin' }));
     await user.type(screen.getByLabelText('Email'), 'vendor@test.com');
     await user.type(screen.getByLabelText('Password'), 'Password1!');
     await user.click(screen.getByRole('button', { name: 'Enter dashboard' }));

@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { CheckCircle2, Edit, Eye, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { CheckCircle2, Edit, Eye, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { approveVendorProfile, listDeletedVendorProfiles, listUnapprovedVendorProfiles, listVendorProfiles } from '@/features/vendors/api/vendorProfileApi';
@@ -16,6 +16,7 @@ import { ApiError } from '@/shared/api/errors';
 import { queryClient } from '@/shared/api/queryClient';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
+import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { Dialog } from '@/shared/components/ui/dialog';
 import { FieldError } from '@/shared/components/ui/field-error';
 import { Input } from '@/shared/components/ui/input';
@@ -27,14 +28,13 @@ import { PaginationBar } from '@/shared/layout/PaginationBar';
 import { cn } from '@/shared/lib/utils';
 import { useToastStore } from '@/shared/stores/toastStore';
 
-type VendorView = 'all' | 'unapproved' | 'deleted' | 'categories' | 'search';
+type VendorView = 'all' | 'unapproved' | 'deleted' | 'categories';
 
 const views: { value: VendorView; label: string }[] = [
   { value: 'all', label: 'All vendors' },
   { value: 'unapproved', label: 'Pending approval' },
   { value: 'deleted', label: 'Deleted profiles' },
   { value: 'categories', label: 'Categories' },
-  { value: 'search', label: 'Search' },
 ];
 
 // Moved from the old cross-feature SearchPage: fetches everything once and
@@ -49,6 +49,7 @@ export function VendorManagementPage() {
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchPage, setSearchPage] = useState(1);
+  const isSearching = searchQuery.trim().length > 0;
 
   const vendorsQuery = useQuery({
     queryKey: ['vendor-profiles', view, page],
@@ -57,7 +58,7 @@ export function VendorManagementPage() {
       if (view === 'deleted') return listDeletedVendorProfiles(page, 10);
       return listVendorProfiles(page, 10);
     },
-    enabled: view !== 'categories' && view !== 'search',
+    enabled: view !== 'categories' && !isSearching,
   });
 
   // VendorProfileDto (Gamification module) has no email - it lives on the
@@ -75,7 +76,7 @@ export function VendorManagementPage() {
   const vendorsSearchRawQuery = useQuery({
     queryKey: ['search-source', 'vendors'],
     queryFn: () => listVendorProfiles(1, SEARCH_FETCH_ALL_PAGE_SIZE),
-    enabled: view === 'search',
+    enabled: isSearching,
     staleTime: 0,
     refetchOnMount: 'always',
   });
@@ -97,6 +98,7 @@ export function VendorManagementPage() {
 
   const [editingCategory, setEditingCategory] = useState<VendorCategoryDto | null>(null);
   const [viewCategoryId, setViewCategoryId] = useState<string | null>(null);
+  const [pendingDeleteCategory, setPendingDeleteCategory] = useState<VendorCategoryDto | null>(null);
 
   // Case-insensitive, live filtering against the already-fetched category
   // list. GET /VendorCategory/name/{name} (used elsewhere via
@@ -145,7 +147,10 @@ export function VendorManagementPage() {
 
   const deleteCategoryMutation = useMutation({
     mutationFn: (id: string) => deleteVendorCategory(id),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['vendor-categories'] }),
+    onSuccess: () => {
+      setPendingDeleteCategory(null);
+      void queryClient.invalidateQueries({ queryKey: ['vendor-categories'] });
+    },
     onError: toastOnError,
   });
 
@@ -167,6 +172,33 @@ export function VendorManagementPage() {
         eyebrow="Admin"
         title="Vendor management"
         description="Vendor profiles, approval state, deleted profile queues, and the category taxonomy vendors choose from."
+        actions={
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            <div className="relative w-full sm:w-80">
+              <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
+              <Input
+                type="search"
+                placeholder="Type any letter or number in a vendor name..."
+                value={searchQuery}
+                onChange={(event) => {
+                  setSearchQuery(event.target.value);
+                  setSearchPage(1);
+                }}
+                className="mt-0 rounded-xl border border-outline/60 bg-surface pl-9 pr-3 shadow-sm focus:border-primary"
+              />
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              aria-label="Refresh results"
+              disabled={vendorsSearchRawQuery.isFetching}
+              onClick={() => void vendorsSearchRawQuery.refetch()}
+            >
+              <RefreshCw size={16} className={vendorsSearchRawQuery.isFetching ? 'animate-spin' : undefined} />
+              Refresh
+            </Button>
+          </div>
+        }
       />
 
       <Tabs.Root value={view} onValueChange={changeView}>
@@ -186,34 +218,50 @@ export function VendorManagementPage() {
         </Tabs.List>
       </Tabs.Root>
 
-      {view === 'categories' ? (
+      {isSearching ? (
         <>
-          <Panel className="mb-4 p-4">
-            <form
-              className="flex items-end gap-3"
-              onSubmit={categoryForm.handleSubmit((values) => createCategoryMutation.mutateAsync(values))}
-            >
-              <div className="flex-1">
-                <Label htmlFor="vendor-category-name">New category name</Label>
-                <Input id="vendor-category-name" placeholder="e.g. Restaurant" {...categoryForm.register('name')} />
-                <FieldError message={categoryForm.formState.errors.name?.message} />
-              </div>
-              <Button disabled={categoryForm.formState.isSubmitting}>
-                <Plus size={17} />
-                Add category
-              </Button>
-            </form>
-          </Panel>
+          {vendorsSearchRawQuery.isLoading ? <LoadingState label="Loading records..." /> : null}
+          {vendorsSearchRawQuery.isError ? <ErrorState onRetry={() => void vendorsSearchRawQuery.refetch()} /> : null}
+          {!vendorsSearchRawQuery.isLoading && !vendorsSearchRawQuery.isError && vendorSearchResult.items.length === 0 ? (
+            <EmptyState title="No matches" description={`No vendors matched "${searchQuery}".`} />
+          ) : null}
+          {vendorSearchResult.items.length > 0 ? (
+            <Panel className="overflow-hidden">
+              <VendorSearchTable vendors={vendorSearchResult.items} emailByUserId={vendorEmailByUserId} />
+              <PaginationBar page={searchPage} result={vendorSearchResult} onPageChange={setSearchPage} />
+            </Panel>
+          ) : null}
+        </>
+      ) : view === 'categories' ? (
+        <>
+          <div className="mb-4 flex flex-col gap-4 lg:flex-row">
+            <Panel className="p-4 lg:w-3/5">
+              <form
+                className="flex items-end gap-3"
+                onSubmit={categoryForm.handleSubmit((values) => createCategoryMutation.mutateAsync(values))}
+              >
+                <div className="flex-1">
+                  <Label htmlFor="vendor-category-name">New category name</Label>
+                  <Input id="vendor-category-name" placeholder="e.g. Restaurant" {...categoryForm.register('name')} />
+                  <FieldError message={categoryForm.formState.errors.name?.message} />
+                </div>
+                <Button disabled={categoryForm.formState.isSubmitting}>
+                  <Plus size={17} />
+                  Add category
+                </Button>
+              </form>
+            </Panel>
 
-          <Panel className="mb-4 p-4">
-            <Label htmlFor="vendor-category-name-filter">Filter categories by name</Label>
-            <Input
-              id="vendor-category-name-filter"
-              placeholder="Type to filter, e.g. restaurant"
-              value={categoryNameFilter}
-              onChange={(event) => setCategoryNameFilter(event.target.value)}
-            />
-          </Panel>
+            <Panel className="p-4 lg:w-2/5">
+              <Label htmlFor="vendor-category-name-filter">Filter categories by name</Label>
+              <Input
+                id="vendor-category-name-filter"
+                placeholder="Type to filter, e.g. restaurant"
+                value={categoryNameFilter}
+                onChange={(event) => setCategoryNameFilter(event.target.value)}
+              />
+            </Panel>
+          </div>
 
           {categoriesQuery.isLoading ? <LoadingState /> : null}
           {categoriesQuery.isError ? <ErrorState onRetry={() => void categoriesQuery.refetch()} /> : null}
@@ -261,7 +309,7 @@ export function VendorManagementPage() {
                             variant="ghost"
                             size="icon"
                             aria-label="Delete category"
-                            onClick={() => void deleteCategoryMutation.mutate(category.id)}
+                            onClick={() => setPendingDeleteCategory(category)}
                           >
                             <Trash2 size={16} />
                           </Button>
@@ -296,6 +344,15 @@ export function VendorManagementPage() {
             </form>
           </Dialog>
 
+          <ConfirmDialog
+            open={pendingDeleteCategory !== null}
+            title={pendingDeleteCategory ? `Delete "${pendingDeleteCategory.name}"?` : 'Delete category?'}
+            description="This cannot be undone. The category will be permanently removed."
+            isConfirming={deleteCategoryMutation.isPending}
+            onCancel={() => setPendingDeleteCategory(null)}
+            onConfirm={() => pendingDeleteCategory && deleteCategoryMutation.mutate(pendingDeleteCategory.id)}
+          />
+
           <VendorCategoryDetailDialog
             categoryId={viewCategoryId}
             open={viewCategoryId !== null}
@@ -303,49 +360,6 @@ export function VendorManagementPage() {
               if (!open) setViewCategoryId(null);
             }}
           />
-        </>
-      ) : view === 'search' ? (
-        <>
-          <Panel className="mb-4 p-4">
-            <div className="flex items-end gap-2">
-              <div className="flex-1">
-                <Input
-                  type="search"
-                  placeholder="Type any letter or number in a vendor name..."
-                  value={searchQuery}
-                  onChange={(event) => {
-                    setSearchQuery(event.target.value);
-                    setSearchPage(1);
-                  }}
-                />
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                aria-label="Refresh results"
-                disabled={vendorsSearchRawQuery.isFetching}
-                onClick={() => void vendorsSearchRawQuery.refetch()}
-              >
-                <RefreshCw size={16} className={vendorsSearchRawQuery.isFetching ? 'animate-spin' : undefined} />
-                Refresh
-              </Button>
-            </div>
-          </Panel>
-
-          {vendorsSearchRawQuery.isLoading ? <LoadingState label="Loading records..." /> : null}
-          {vendorsSearchRawQuery.isError ? <ErrorState onRetry={() => void vendorsSearchRawQuery.refetch()} /> : null}
-          {!vendorsSearchRawQuery.isLoading && !vendorsSearchRawQuery.isError && searchQuery.length === 0 ? (
-            <EmptyState title="Start typing to search" description="Matches appear instantly as you type any part of the name." />
-          ) : null}
-          {!vendorsSearchRawQuery.isLoading && !vendorsSearchRawQuery.isError && searchQuery.length > 0 && vendorSearchResult.items.length === 0 ? (
-            <EmptyState title="No matches" description={`No vendors matched "${searchQuery}".`} />
-          ) : null}
-          {searchQuery.length > 0 && vendorSearchResult.items.length > 0 ? (
-            <Panel className="overflow-hidden">
-              <VendorSearchTable vendors={vendorSearchResult.items} emailByUserId={vendorEmailByUserId} />
-              <PaginationBar page={searchPage} result={vendorSearchResult} onPageChange={setSearchPage} />
-            </Panel>
-          ) : null}
         </>
       ) : (
         <>

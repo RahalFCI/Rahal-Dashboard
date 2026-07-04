@@ -5,8 +5,10 @@ import {
   type ColumnDef,
 } from '@tanstack/react-table';
 import { Edit, KeyRound, RotateCcw, Trash, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
+import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import type { UserSummaryDto } from '../types';
 
 interface UserTableProps {
@@ -21,6 +23,7 @@ interface UserTableProps {
 
 export function UserTable({ users, currentUserId, onEdit, onPassword, onDelete, onRestore, onPermanentDelete }: UserTableProps) {
   const hasActions = Boolean(onEdit || onPassword || onDelete || onRestore || onPermanentDelete);
+  const [confirmDeleteUser, setConfirmDeleteUser] = useState<UserSummaryDto | null>(null);
   const columns: ColumnDef<UserSummaryDto>[] = [
     {
       header: 'Name',
@@ -75,7 +78,13 @@ export function UserTable({ users, currentUserId, onEdit, onPassword, onDelete, 
               </Button>
             ) : null}
             {!row.original.isDeleted && onDelete ? (
-              <Button type="button" variant="ghost" size="icon" aria-label="Delete user" onClick={() => onDelete(row.original)}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Delete user"
+                onClick={() => setConfirmDeleteUser(row.original)}
+              >
                 <Trash2 size={16} />
               </Button>
             ) : null}
@@ -99,31 +108,44 @@ export function UserTable({ users, currentUserId, onEdit, onPassword, onDelete, 
   const table = useReactTable({ data: users, columns, getCoreRowModel: getCoreRowModel() });
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[760px] text-left text-sm">
-        <thead className="bg-surface-low text-xs uppercase tracking-[0.14em] text-on-surface-variant">
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <th key={header.id} className="px-4 py-3 font-semibold">
-                  {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <tr key={row.id} className="border-t border-outline/40">
-              {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className="px-4 py-3 align-middle">
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[760px] text-left text-sm">
+          <thead className="bg-surface-low text-xs uppercase tracking-[0.14em] text-on-surface-variant">
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <th key={header.id} className="px-4 py-3 font-semibold">
+                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </thead>
+          <tbody>
+            {table.getRowModel().rows.map((row) => (
+              <tr key={row.id} className="border-t border-outline/40">
+                {row.getVisibleCells().map((cell) => (
+                  <td key={cell.id} className="px-4 py-3 align-middle">
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <ConfirmDialog
+        open={confirmDeleteUser !== null}
+        title={confirmDeleteUser ? `Delete ${confirmDeleteUser.name}?` : 'Delete user?'}
+        description="This account can be restored later from the deleted-users view, so it isn't permanent, but the user will lose access immediately."
+        onConfirm={() => {
+          if (confirmDeleteUser) onDelete?.(confirmDeleteUser);
+          setConfirmDeleteUser(null);
+        }}
+        onCancel={() => setConfirmDeleteUser(null)}
+      />
+    </>
   );
 }

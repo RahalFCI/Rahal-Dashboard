@@ -60,6 +60,8 @@ export interface VendorBranchDto {
   address: VendorBranchAddressDto | null;
 }
 
+export type GetVendorBranchDto = VendorBranchDto;
+
 export interface UpsertVendorBranchDto {
   vendorId?: string;
   branchName: string;
@@ -73,3 +75,9 @@ export interface UpsertVendorBranchDto {
   geoFenceRange: number;
   address: VendorBranchAddressDto;
 }
+
+export interface CreateVendorBranchDto extends Omit<UpsertVendorBranchDto, 'vendorId'> {
+  vendorId: string;
+}
+
+export type UpdateVendorBranchDto = Omit<UpsertVendorBranchDto, 'vendorId'>;

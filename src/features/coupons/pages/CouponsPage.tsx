@@ -6,6 +6,7 @@ import { ApiError } from '@/shared/api/errors';
 import { queryClient } from '@/shared/api/queryClient';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
+import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { Panel } from '@/shared/components/ui/panel';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/layout/DataState';
 import { PageHeader } from '@/shared/layout/PageHeader';
@@ -25,6 +26,7 @@ export function CouponsPage() {
   const [editingCoupon, setEditingCoupon] = useState<GetCouponDto | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const [editServerError, setEditServerError] = useState<string | null>(null);
+  const [confirmDeleteCoupon, setConfirmDeleteCoupon] = useState<GetCouponDto | null>(null);
 
   const couponsQuery = useQuery({
     queryKey: ['coupons', page],
@@ -71,10 +73,14 @@ export function CouponsPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteCoupon(id),
     onSuccess: () => {
+      setConfirmDeleteCoupon(null);
       void queryClient.invalidateQueries({ queryKey: ['coupons'] });
       useToastStore.getState().add({ message: 'Coupon deleted.', variant: 'success' });
     },
-    onError: toastOnError,
+    onError: (error) => {
+      setConfirmDeleteCoupon(null);
+      toastOnError(error);
+    },
   });
 
   function toDiscountTypeString(value: number): 'FixedAmount' | 'Percentage' {
@@ -212,7 +218,7 @@ export function CouponsPage() {
                           variant="ghost"
                           size="icon"
                           aria-label="Delete coupon"
-                          onClick={() => void deleteMutation.mutate(coupon.id)}
+                          onClick={() => setConfirmDeleteCoupon(coupon)}
                         >
                           <Trash2 size={16} />
                         </Button>
@@ -240,6 +246,15 @@ export function CouponsPage() {
         onOpenChange={(open) => { if (!open) { setEditingCoupon(null); setEditServerError(null); } }}
         onSubmit={handleUpdate}
         serverError={editServerError}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteCoupon !== null}
+        title={confirmDeleteCoupon ? `Delete "${confirmDeleteCoupon.title}"?` : 'Delete coupon?'}
+        description="This cannot be undone. Explorers will no longer be able to claim or redeem this coupon."
+        isConfirming={deleteMutation.isPending}
+        onConfirm={() => confirmDeleteCoupon && deleteMutation.mutate(confirmDeleteCoupon.id)}
+        onCancel={() => setConfirmDeleteCoupon(null)}
       />
     </>
   );

@@ -1,6 +1,8 @@
 import { CheckSquare, Edit, Image, Star, Swords, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
+import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { PlaceThumbnail } from './PlaceThumbnail';
 import type { GetPlaceCategoryDto, GetPlaceDto } from '../types';
 
@@ -30,6 +32,7 @@ export function PlaceTable({
   // empty for every place. Look the name up from the already-fetched category list
   // as a workaround until that's fixed server-side.
   const categoryNameById = new Map(categories.map((category) => [category.id, category.name]));
+  const [pendingDelete, setPendingDelete] = useState<GetPlaceDto | null>(null);
 
   return (
     <div className="overflow-x-auto">
@@ -111,7 +114,7 @@ export function PlaceTable({
                       </Button>
                     ) : null}
                     {onDelete ? (
-                      <Button type="button" variant="ghost" size="icon" aria-label="Delete place" onClick={() => onDelete(place)}>
+                      <Button type="button" variant="ghost" size="icon" aria-label="Delete place" onClick={() => setPendingDelete(place)}>
                         <Trash2 size={16} />
                       </Button>
                     ) : null}
@@ -122,6 +125,17 @@ export function PlaceTable({
           ))}
         </tbody>
       </table>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={pendingDelete ? `Delete "${pendingDelete.name}"?` : 'Delete place?'}
+        description="This cannot be undone. The place and all associated data will be permanently removed."
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          if (pendingDelete) onDelete?.(pendingDelete);
+          setPendingDelete(null);
+        }}
+      />
     </div>
   );
 }

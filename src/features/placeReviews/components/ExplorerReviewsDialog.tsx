@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { queryClient } from '@/shared/api/queryClient';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
+import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { Dialog } from '@/shared/components/ui/dialog';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/layout/DataState';
 import { deleteReview, getReviewsByExplorerId } from '../api/placeReviewApi';
@@ -24,6 +25,7 @@ interface ReviewKey {
 
 export function ExplorerReviewsDialog({ explorerId, explorerName, open, onOpenChange }: ExplorerReviewsDialogProps) {
   const [viewReviewKey, setViewReviewKey] = useState<ReviewKey | null>(null);
+  const [confirmDeleteKey, setConfirmDeleteKey] = useState<ReviewKey | null>(null);
 
   const reviewsQuery = useQuery({
     queryKey: ['place-reviews', 'by-explorer', explorerId],
@@ -33,7 +35,11 @@ export function ExplorerReviewsDialog({ explorerId, explorerName, open, onOpenCh
 
   const deleteReviewMutation = useMutation({
     mutationFn: (key: ReviewKey) => deleteReview(key.explorerId, key.placeId, key.checkInId),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['place-reviews'] }),
+    onSuccess: () => {
+      setConfirmDeleteKey(null);
+      void queryClient.invalidateQueries({ queryKey: ['place-reviews'] });
+    },
+    onError: () => setConfirmDeleteKey(null),
   });
 
   return (
@@ -94,7 +100,7 @@ export function ExplorerReviewsDialog({ explorerId, explorerName, open, onOpenCh
                         size="icon"
                         aria-label="Delete review"
                         onClick={() =>
-                          void deleteReviewMutation.mutate({
+                          setConfirmDeleteKey({
                             explorerId: review.explorerId,
                             placeId: review.placeId,
                             checkInId: review.checkInId,
@@ -119,6 +125,15 @@ export function ExplorerReviewsDialog({ explorerId, explorerName, open, onOpenCh
         onOpenChange={(open) => {
           if (!open) setViewReviewKey(null);
         }}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteKey !== null}
+        title="Delete this review?"
+        description="This cannot be undone - there is no restore option for reviews."
+        isConfirming={deleteReviewMutation.isPending}
+        onConfirm={() => confirmDeleteKey && deleteReviewMutation.mutate(confirmDeleteKey)}
+        onCancel={() => setConfirmDeleteKey(null)}
       />
     </Dialog>
   );

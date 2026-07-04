@@ -8,6 +8,7 @@ import { listBadges } from '@/features/badges/api/badgesApi';
 import { ApiError } from '@/shared/api/errors';
 import { queryClient } from '@/shared/api/queryClient';
 import { Button } from '@/shared/components/ui/button';
+import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { Dialog } from '@/shared/components/ui/dialog';
 import { FieldError } from '@/shared/components/ui/field-error';
 import { Input } from '@/shared/components/ui/input';
@@ -54,6 +55,8 @@ export function AchievementsPage() {
   const [criteriaTypeDialogOpen, setCriteriaTypeDialogOpen] = useState(false);
   const [viewCriteriaTypeId, setViewCriteriaTypeId] = useState<string | null>(null);
   const [confirmPermanentDeleteId, setConfirmPermanentDeleteId] = useState<string | null>(null);
+  const [confirmDeleteAchievement, setConfirmDeleteAchievement] = useState<GetAchievementDto | null>(null);
+  const [confirmDeleteCriteriaType, setConfirmDeleteCriteriaType] = useState<GetAchievementCriteriaTypeDto | null>(null);
 
   function changeView(nextView: string) {
     setView(nextView as AchievementsView);
@@ -258,7 +261,7 @@ export function AchievementsPage() {
                               variant="ghost"
                               size="icon"
                               aria-label="Delete achievement"
-                              onClick={() => void deleteAchievementMutation.mutate(achievement.id)}
+                              onClick={() => setConfirmDeleteAchievement(achievement)}
                             >
                               <Trash2 size={16} />
                             </Button>
@@ -334,7 +337,7 @@ export function AchievementsPage() {
                             variant="ghost"
                             size="icon"
                             aria-label="Delete criteria type"
-                            onClick={() => void deleteCriteriaTypeMutation.mutate(criteriaType.id)}
+                            onClick={() => setConfirmDeleteCriteriaType(criteriaType)}
                           >
                             <Trash2 size={16} />
                           </Button>
@@ -440,6 +443,30 @@ export function AchievementsPage() {
           </Button>
         </div>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmDeleteAchievement !== null}
+        title={confirmDeleteAchievement ? `Delete "${confirmDeleteAchievement.title}"?` : 'Delete achievement?'}
+        description="You can undo this from the toast that appears after deleting."
+        isConfirming={deleteAchievementMutation.isPending}
+        onConfirm={() => {
+          if (confirmDeleteAchievement) deleteAchievementMutation.mutate(confirmDeleteAchievement.id);
+          setConfirmDeleteAchievement(null);
+        }}
+        onCancel={() => setConfirmDeleteAchievement(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteCriteriaType !== null}
+        title={confirmDeleteCriteriaType ? `Delete "${confirmDeleteCriteriaType.name}"?` : 'Delete criteria type?'}
+        description="This cannot be undone."
+        isConfirming={deleteCriteriaTypeMutation.isPending}
+        onConfirm={() => {
+          if (confirmDeleteCriteriaType) deleteCriteriaTypeMutation.mutate(confirmDeleteCriteriaType.id);
+          setConfirmDeleteCriteriaType(null);
+        }}
+        onCancel={() => setConfirmDeleteCriteriaType(null)}
+      />
     </>
   );
 }

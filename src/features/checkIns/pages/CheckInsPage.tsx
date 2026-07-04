@@ -7,6 +7,7 @@ import { ApiError } from '@/shared/api/errors';
 import { queryClient } from '@/shared/api/queryClient';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
+import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { Panel } from '@/shared/components/ui/panel';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/layout/DataState';
 import { PageHeader } from '@/shared/layout/PageHeader';
@@ -33,6 +34,7 @@ export function CheckInsPage() {
   const [view, setView] = useState<CheckInsView>('all');
   const [page, setPage] = useState(1);
   const [viewCheckIn, setViewCheckIn] = useState<{ explorerId: string; placeId: string } | null>(null);
+  const [confirmDeleteCheckIn, setConfirmDeleteCheckIn] = useState<{ explorerId: string; placeId: string } | null>(null);
 
   function toastOnError(error: unknown) {
     if (error instanceof ApiError) useToastStore.getState().add({ message: error.message, variant: 'error' });
@@ -42,10 +44,14 @@ export function CheckInsPage() {
     mutationFn: ({ explorerId, placeId }: { explorerId: string; placeId: string }) =>
       deleteCheckIn(explorerId, placeId),
     onSuccess: () => {
+      setConfirmDeleteCheckIn(null);
       void queryClient.invalidateQueries({ queryKey: ['check-ins'] });
       useToastStore.getState().add({ message: 'Check-in deleted.', variant: 'success' });
     },
-    onError: toastOnError,
+    onError: (error) => {
+      setConfirmDeleteCheckIn(null);
+      toastOnError(error);
+    },
   });
 
   const updateMutation = useMutation({
@@ -183,7 +189,7 @@ export function CheckInsPage() {
                           size="icon"
                           aria-label="Delete check-in"
                           disabled={deleteMutation.isPending}
-                          onClick={() => deleteMutation.mutate({ explorerId: checkIn.explorerId, placeId: checkIn.placeId })}
+                          onClick={() => setConfirmDeleteCheckIn({ explorerId: checkIn.explorerId, placeId: checkIn.placeId })}
                         >
                           <Trash2 size={16} />
                         </Button>
@@ -206,6 +212,15 @@ export function CheckInsPage() {
         onOpenChange={(open) => {
           if (!open) setViewCheckIn(null);
         }}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteCheckIn !== null}
+        title="Delete this check-in?"
+        description="This can be undone."
+        isConfirming={deleteMutation.isPending}
+        onConfirm={() => confirmDeleteCheckIn && deleteMutation.mutate(confirmDeleteCheckIn)}
+        onCancel={() => setConfirmDeleteCheckIn(null)}
       />
     </>
   );

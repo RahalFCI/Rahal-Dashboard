@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Eye, Plus, Trash, Trash2 } from 'lucide-react';
+import { Eye, Plus, Search, Trash, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { listPlaces } from '@/features/places/api/placesApi';
 import { matchesQuery, paginateClientSide } from '@/features/search/lib/clientSearch';
@@ -7,13 +7,13 @@ import { ApiError } from '@/shared/api/errors';
 import { queryClient } from '@/shared/api/queryClient';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
+import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { Dialog } from '@/shared/components/ui/dialog';
-import { Input } from '@/shared/components/ui/input';
-import { Label } from '@/shared/components/ui/label';
 import { Panel } from '@/shared/components/ui/panel';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/layout/DataState';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { PaginationBar } from '@/shared/layout/PaginationBar';
+import { cn } from '@/shared/lib/utils';
 import { useToastStore } from '@/shared/stores/toastStore';
 import { createChallenge, deleteChallenge, listChallenges, permanentDeleteChallenge, restoreChallenge } from '../api/challengeApi';
 import { ChallengeDetailDialog } from '../components/ChallengeDetailDialog';
@@ -27,6 +27,7 @@ export function ChallengesPage() {
   const [viewChallengeId, setViewChallengeId] = useState<string | null>(null);
   const [nameFilter, setNameFilter] = useState('');
   const [confirmPermanentDeleteId, setConfirmPermanentDeleteId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   // GET /Challenge/name/{name} (used elsewhere via getChallengeByName) only
@@ -93,6 +94,7 @@ export function ChallengesPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteChallenge(id),
     onSuccess: (_data, id) => {
+      setConfirmDeleteId(null);
       invalidate();
       // No "list deleted" endpoint exists for this resource, so this Undo
       // button is the only way to reach POST /Challenge/{id}/restore.
@@ -102,7 +104,10 @@ export function ChallengesPage() {
         action: { label: 'Undo', onClick: () => restoreMutation.mutate(id) },
       });
     },
-    onError: toastOnError,
+    onError: (error) => {
+      setConfirmDeleteId(null);
+      toastOnError(error);
+    },
   });
 
   // GetChallengeDto only exposes placeId, not a place name - resolve it
@@ -121,22 +126,35 @@ export function ChallengesPage() {
         title="Challenges"
         description="Place-based challenges explorers can attempt, with difficulty and XP reward."
         actions={
-          <Button type="button" onClick={() => setCreateDialogOpen(true)}>
-            <Plus size={17} />
-            New challenge
-          </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative w-full sm:w-72">
+              <input
+                id="challenge-name-filter"
+                type="text"
+                aria-label="Filter challenges by name"
+                placeholder="Search..."
+                value={nameFilter}
+                onChange={(event) => changeNameFilter(event.target.value)}
+                className={cn(
+                  'w-full rounded-full border-none bg-surface py-3 pl-6 pr-12 text-sm text-on-surface-variant/80 outline-none',
+                  'placeholder:text-on-surface-variant/50',
+                  'shadow-[6px_6px_12px_#d1c5b2,-6px_-6px_12px_#ffffff] transition-shadow duration-200',
+                  'focus:shadow-[inset_3px_3px_6px_#d1c5b2,inset_-3px_-3px_6px_#ffffff]',
+                )}
+              />
+              <Search
+                size={16}
+                strokeWidth={1.5}
+                className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-on-surface-variant/50"
+              />
+            </div>
+            <Button type="button" onClick={() => setCreateDialogOpen(true)}>
+              <Plus size={17} />
+              New challenge
+            </Button>
+          </div>
         }
       />
-
-      <Panel className="mb-4 p-4">
-        <Label htmlFor="challenge-name-filter">Filter challenges by name</Label>
-        <Input
-          id="challenge-name-filter"
-          placeholder="Type to filter, e.g. sphinx"
-          value={nameFilter}
-          onChange={(event) => changeNameFilter(event.target.value)}
-        />
-      </Panel>
 
       {activeQuery.isLoading ? <LoadingState /> : null}
       {activeQuery.isError ? <ErrorState onRetry={() => void activeQuery.refetch()} /> : null}
@@ -195,7 +213,7 @@ export function ChallengesPage() {
                           variant="ghost"
                           size="icon"
                           aria-label="Delete challenge"
-                          onClick={() => void deleteMutation.mutate(challenge.id)}
+                          onClick={() => setConfirmDeleteId(challenge.id)}
                         >
                           <Trash2 size={16} />
                         </Button>
@@ -237,6 +255,15 @@ export function ChallengesPage() {
         onOpenChange={(open) => {
           if (!open) setViewChallengeId(null);
         }}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="Delete challenge?"
+        description="You can undo this from the toast that appears right after deleting."
+        isConfirming={deleteMutation.isPending}
+        onConfirm={() => confirmDeleteId && deleteMutation.mutate(confirmDeleteId)}
+        onCancel={() => setConfirmDeleteId(null)}
       />
 
       <Dialog

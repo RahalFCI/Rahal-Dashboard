@@ -5,6 +5,7 @@ import { ApiError } from '@/shared/api/errors';
 import { queryClient } from '@/shared/api/queryClient';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
+import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { Dialog } from '@/shared/components/ui/dialog';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
@@ -31,6 +32,7 @@ export function CheckInChallengesPage() {
   const [idInput, setIdInput] = useState('');
   const [searchedId, setSearchedId] = useState('');
   const [confirmPermanentDeleteId, setConfirmPermanentDeleteId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // There's no "list all" endpoint for this resource - GetCheckInChallengeById
   // is the only way to look one up here until the by-challenge/by-checkin
@@ -97,6 +99,7 @@ export function CheckInChallengesPage() {
   const deleteCheckInChallengeMutation = useMutation({
     mutationFn: (id: string) => deleteCheckInChallenge(id),
     onSuccess: (_data, id) => {
+      setConfirmDeleteId(null);
       void queryClient.invalidateQueries({ queryKey: ['check-in-challenges'] });
       if (id === searchedId) {
         setSearchedId('');
@@ -108,7 +111,10 @@ export function CheckInChallengesPage() {
         action: { label: 'Undo', onClick: () => restoreCheckInChallengeMutation.mutate(id) },
       });
     },
-    onError: toastOnError,
+    onError: (error) => {
+      setConfirmDeleteId(null);
+      toastOnError(error);
+    },
   });
 
   return (
@@ -159,7 +165,7 @@ export function CheckInChallengesPage() {
                   variant="ghost"
                   size="icon"
                   aria-label="Delete check-in challenge"
-                  onClick={() => void deleteCheckInChallengeMutation.mutate(challengeQuery.data.id)}
+                  onClick={() => setConfirmDeleteId(challengeQuery.data.id)}
                 >
                   <Trash2 size={16} />
                 </Button>
@@ -286,7 +292,7 @@ export function CheckInChallengesPage() {
                             variant="ghost"
                             size="icon"
                             aria-label="Delete check-in challenge"
-                            onClick={() => void deleteCheckInChallengeMutation.mutate(challenge.id)}
+                            onClick={() => setConfirmDeleteId(challenge.id)}
                           >
                             <Trash2 size={16} />
                           </Button>
@@ -378,7 +384,7 @@ export function CheckInChallengesPage() {
                             variant="ghost"
                             size="icon"
                             aria-label="Delete check-in challenge"
-                            onClick={() => void deleteCheckInChallengeMutation.mutate(challenge.id)}
+                            onClick={() => setConfirmDeleteId(challenge.id)}
                           >
                             <Trash2 size={16} />
                           </Button>
@@ -403,6 +409,15 @@ export function CheckInChallengesPage() {
           ) : null}
         </>
       ) : null}
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="Delete check-in challenge?"
+        description="You can undo this from the toast that appears right after deleting."
+        isConfirming={deleteCheckInChallengeMutation.isPending}
+        onConfirm={() => confirmDeleteId && deleteCheckInChallengeMutation.mutate(confirmDeleteId)}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
+
       <Dialog
         open={confirmPermanentDeleteId !== null}
         onOpenChange={(open) => { if (!open) setConfirmPermanentDeleteId(null); }}
