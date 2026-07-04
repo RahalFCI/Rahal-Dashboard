@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { Button } from '@/shared/components/ui/button';
 import { Dialog } from '@/shared/components/ui/dialog';
@@ -16,7 +16,15 @@ interface PlaceDialogProps {
   place?: GetPlaceDto | null;
   categories: GetPlaceCategoryDto[];
   onOpenChange: (open: boolean) => void;
-  onSubmit: (values: PlaceFormValues) => Promise<unknown>;
+  onSubmit: (values: PlaceFormValues, photo: File | null) => Promise<unknown>;
+  // Set once a new place has been created but its photo failed to upload -
+  // creating the place is not undone in that case (see PlacesPage), so the
+  // dialog switches into a small retry-only view instead of losing the record.
+  createdPlaceId?: string | null;
+  onRetryPhoto: (photo: File) => Promise<unknown>;
+  onSkipPhoto: () => void;
+  photoError?: string | null;
+  isSubmittingPhoto?: boolean;
 }
 
 const defaultValues: PlaceFormValues = {
@@ -35,14 +43,29 @@ const defaultValues: PlaceFormValues = {
   },
 };
 
-export function PlaceDialog({ open, place, categories, onOpenChange, onSubmit }: PlaceDialogProps) {
+export function PlaceDialog({
+  open,
+  place,
+  categories,
+  onOpenChange,
+  onSubmit,
+  createdPlaceId,
+  onRetryPhoto,
+  onSkipPhoto,
+  photoError,
+  isSubmittingPhoto,
+}: PlaceDialogProps) {
   const form = useForm<PlaceFormValues>({
     resolver: zodResolver(placeSchema) as Resolver<PlaceFormValues>,
     defaultValues,
   });
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [retryPhoto, setRetryPhoto] = useState<File | null>(null);
 
   useEffect(() => {
     if (!open) return;
+    setPhoto(null);
+    setRetryPhoto(null);
     form.reset(
       place
         ? {
@@ -59,9 +82,47 @@ export function PlaceDialog({ open, place, categories, onOpenChange, onSubmit }:
     );
   }, [form, open, place]);
 
+  if (createdPlaceId) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange} title="Add a photo">
+        <div className="grid gap-4">
+          <p className="text-sm text-on-surface-variant">
+            The place was created, but the photo didn&apos;t upload{photoError ? `: ${photoError}` : '.'} Try again,
+            or skip for now and add one later.
+          </p>
+          <div>
+            <Label htmlFor="retryPhoto">Photo</Label>
+            <Input
+              id="retryPhoto"
+              type="file"
+              accept="image/*"
+              onChange={(event) => setRetryPhoto(event.target.files?.[0] ?? null)}
+            />
+          </div>
+          <FieldError message={photoError ?? undefined} />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={onSkipPhoto}>
+              Skip for now
+            </Button>
+            <Button
+              type="button"
+              disabled={!retryPhoto || isSubmittingPhoto}
+              onClick={() => retryPhoto && onRetryPhoto(retryPhoto)}
+            >
+              Upload photo
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title={place ? 'Edit place' : 'Create place'}>
-      <form className="grid max-h-[72vh] gap-4 overflow-y-auto pr-1" onSubmit={form.handleSubmit(onSubmit)}>
+      <form
+        className="grid max-h-[72vh] gap-4 overflow-y-auto pr-1"
+        onSubmit={form.handleSubmit((values) => onSubmit(values, photo))}
+      >
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="name">Name</Label>
@@ -122,6 +183,12 @@ export function PlaceDialog({ open, place, categories, onOpenChange, onSubmit }:
             <Input id="country" {...form.register('address.country')} />
           </div>
         </div>
+        {!place ? (
+          <div>
+            <Label htmlFor="photo">Photo (optional)</Label>
+            <Input id="photo" type="file" accept="image/*" onChange={(event) => setPhoto(event.target.files?.[0] ?? null)} />
+          </div>
+        ) : null}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel

@@ -8,6 +8,7 @@ import { Panel } from '@/shared/components/ui/panel';
 import { queryClient } from '@/shared/api/queryClient';
 import { ErrorState, LoadingState } from '@/shared/layout/DataState';
 import { PageHeader } from '@/shared/layout/PageHeader';
+import { resolveMediaUrl } from '@/shared/lib/utils';
 import { addPlacePhoto, deletePlacePhoto, getPlace, listPlacePhotos } from '@/features/places/api/placesApi';
 
 export function VendorPlaceDetailPage() {
@@ -75,7 +76,7 @@ export function VendorPlaceDetailPage() {
             const url = photo.photoUrl ?? photo.url ?? '';
             return (
               <Panel key={`${url}-${index}`} className="overflow-hidden">
-                {url ? <img src={url} alt="" className="aspect-video w-full object-cover" /> : null}
+                {url ? <img src={resolveMediaUrl(url)} alt="" className="aspect-video w-full object-cover" /> : null}
                 <div className="flex items-center justify-between p-3">
                   <span className="truncate text-xs text-on-surface-variant">{url}</span>
                   <Button type="button" variant="ghost" size="icon" aria-label="Delete photo" onClick={() => void deleteMutation.mutate(url)}>

@@ -29,7 +29,17 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config as RetriableRequestConfig | undefined;
 
-    if (!isAxiosError(error) || error.response?.status !== 401 || !originalRequest || originalRequest._retry) {
+    if (
+      !isAxiosError(error) ||
+      error.response?.status !== 401 ||
+      !originalRequest ||
+      originalRequest._retry ||
+      // refreshTokens() itself hits this same axiosInstance. Without this guard, a
+      // 401 from /auth/generate (e.g. a revoked/expired refresh token) re-enters this
+      // interceptor, which awaits the in-flight refreshPromise it is itself part of -
+      // a deadlock that left requests pending forever instead of failing.
+      originalRequest.url === '/auth/generate'
+    ) {
       return Promise.reject(error);
     }
 

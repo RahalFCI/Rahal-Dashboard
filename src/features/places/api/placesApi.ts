@@ -32,6 +32,38 @@ export function deletePlace(id: string) {
   return apiClient<string>({ method: 'DELETE', url: `/place/${id}` });
 }
 
+export function getPlacesByCategory(categoryId: string, page: number, pageSize: number) {
+  return apiClient<PagedResult<GetPlaceDto>>({
+    method: 'GET',
+    url: `/place/category/${categoryId}`,
+    params: { page, pageSize },
+  });
+}
+
+export interface LocationSearchParams {
+  latitude: number;
+  longitude: number;
+  radiusInMeters: number;
+  page: number;
+  pageSize: number;
+}
+
+// POST /api/place/search binds its body via [FromQuery], including the nested
+// offsetPaginationRequest object, so everything is sent as query params, not a body.
+export function searchPlacesByLocation(params: LocationSearchParams) {
+  return apiClient<PagedResult<GetPlaceDto>>({
+    method: 'POST',
+    url: '/place/search',
+    params: {
+      Latitude: params.latitude,
+      Longitude: params.longitude,
+      RadiusInMeters: params.radiusInMeters,
+      'offsetPaginationRequest.Page': params.page,
+      'offsetPaginationRequest.PageSize': params.pageSize,
+    },
+  });
+}
+
 export function listCategories() {
   return apiClient<GetPlaceCategoryDto[]>({ method: 'GET', url: '/placecategory' });
 }

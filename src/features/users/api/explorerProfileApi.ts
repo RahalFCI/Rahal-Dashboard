@@ -26,6 +26,24 @@ export function getExplorerProfile(userId: string) {
   });
 }
 
+export interface ExplorerNameDto {
+  id: string;
+  displayName: string;
+}
+
+// Bulk-resolve ExplorerProfile.Id -> display name. Meant for modules outside
+// Gamification (e.g. check-ins, place reviews) that store an explorer id but
+// have no relationship to the ExplorerProfile table to join against.
+export function getExplorerNamesByIds(ids: string[]) {
+  if (ids.length === 0) return Promise.resolve([] as ExplorerNameDto[]);
+  return apiClient<ExplorerNameDto[]>({
+    method: 'GET',
+    url: '/ExplorerProfile/names',
+    params: { ids },
+    paramsSerializer: { indexes: null },
+  });
+}
+
 export function listExplorerProfiles(page: number, pageSize: number) {
   return apiClient<PagedResult<ExplorerProfileDto>>({
     method: 'GET',

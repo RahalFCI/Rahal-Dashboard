@@ -4,21 +4,23 @@ import {
   useReactTable,
   type ColumnDef,
 } from '@tanstack/react-table';
-import { Edit, KeyRound, RotateCcw, Trash2 } from 'lucide-react';
+import { Edit, KeyRound, RotateCcw, Trash, Trash2 } from 'lucide-react';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import type { UserSummaryDto } from '../types';
 
 interface UserTableProps {
   users: UserSummaryDto[];
-  onEdit: (user: UserSummaryDto) => void;
-  onPassword: (user: UserSummaryDto) => void;
-  onDelete: (user: UserSummaryDto) => void;
-  onRestore: (user: UserSummaryDto) => void;
-  includeDeleted: boolean;
+  currentUserId?: string;
+  onEdit?: (user: UserSummaryDto) => void;
+  onPassword?: (user: UserSummaryDto) => void;
+  onDelete?: (user: UserSummaryDto) => void;
+  onRestore?: (user: UserSummaryDto) => void;
+  onPermanentDelete?: (user: UserSummaryDto) => void;
 }
 
-export function UserTable({ users, onEdit, onPassword, onDelete, onRestore, includeDeleted }: UserTableProps) {
+export function UserTable({ users, currentUserId, onEdit, onPassword, onDelete, onRestore, onPermanentDelete }: UserTableProps) {
+  const hasActions = Boolean(onEdit || onPassword || onDelete || onRestore || onPermanentDelete);
   const columns: ColumnDef<UserSummaryDto>[] = [
     {
       header: 'Name',
@@ -39,6 +41,7 @@ export function UserTable({ users, onEdit, onPassword, onDelete, onRestore, incl
       header: 'Status',
       cell: ({ row }) => {
         const user = row.original;
+        if (user.isDeleted) return <Badge className="bg-red-100 text-red-700">Deleted</Badge>;
         if ('isApproved' in user) return <Badge className={user.isApproved ? 'bg-green-100 text-green-700' : ''}>{user.isApproved ? 'Approved' : 'Pending'}</Badge>;
         if ('isPremium' in user) return <Badge>{user.isPremium ? 'Premium' : `Level ${user.level}`}</Badge>;
         return <Badge>Active</Badge>;
@@ -47,31 +50,49 @@ export function UserTable({ users, onEdit, onPassword, onDelete, onRestore, incl
     {
       id: 'actions',
       header: '',
-      cell: ({ row }) => (
-        <div className="flex justify-end gap-1">
-          <Button type="button" variant="ghost" size="icon" aria-label="Edit user" onClick={() => onEdit(row.original)}>
-            <Edit size={16} />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label="Update password"
-            onClick={() => onPassword(row.original)}
-          >
-            <KeyRound size={16} />
-          </Button>
-          {includeDeleted ? (
-            <Button type="button" variant="ghost" size="icon" aria-label="Restore user" onClick={() => onRestore(row.original)}>
-              <RotateCcw size={16} />
-            </Button>
-          ) : (
-            <Button type="button" variant="ghost" size="icon" aria-label="Delete user" onClick={() => onDelete(row.original)}>
-              <Trash2 size={16} />
-            </Button>
-          )}
-        </div>
-      ),
+      cell: ({ row }) =>
+        hasActions ? (
+          <div className="flex justify-end gap-1">
+            {onEdit ? (
+              <Button type="button" variant="ghost" size="icon" aria-label="Edit user" onClick={() => onEdit(row.original)}>
+                <Edit size={16} />
+              </Button>
+            ) : null}
+            {onPassword ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Update password"
+                onClick={() => onPassword(row.original)}
+              >
+                <KeyRound size={16} />
+              </Button>
+            ) : null}
+            {row.original.isDeleted && onRestore ? (
+              <Button type="button" variant="ghost" size="icon" aria-label="Restore user" onClick={() => onRestore(row.original)}>
+                <RotateCcw size={16} />
+              </Button>
+            ) : null}
+            {!row.original.isDeleted && onDelete ? (
+              <Button type="button" variant="ghost" size="icon" aria-label="Delete user" onClick={() => onDelete(row.original)}>
+                <Trash2 size={16} />
+              </Button>
+            ) : null}
+            {onPermanentDelete && row.original.id === currentUserId ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Permanently delete your account"
+                className="text-error hover:text-error"
+                onClick={() => onPermanentDelete(row.original)}
+              >
+                <Trash size={16} />
+              </Button>
+            ) : null}
+          </div>
+        ) : null,
     },
   ];
 

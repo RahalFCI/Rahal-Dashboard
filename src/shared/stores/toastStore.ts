@@ -4,6 +4,7 @@ export interface ToastItem {
   id: string;
   message: string;
   variant: 'error' | 'success' | 'info';
+  action?: { label: string; onClick: () => void };
 }
 
 interface ToastStore {

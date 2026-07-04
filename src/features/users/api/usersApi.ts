@@ -3,6 +3,32 @@ import type { PagedResult } from '@/shared/api/types';
 import type { UserRole } from '@/features/auth/types';
 import type { AccountUserDto, CreateUserDto, ManageableRole, UpdatePasswordDto, UserDto, UserSummaryDto } from '../types';
 
+export function listAllUsers(page: number, pageSize: number) {
+  return apiClient<PagedResult<UserSummaryDto>>({
+    method: 'GET',
+    url: '/User',
+    params: { page, pageSize },
+  });
+}
+
+// GetAllAdminsAsync (this route) and its explorers/vendors siblings all
+// delegate to the exact same _userService.GetAllUsers(...) call as the plain
+// GET /User endpoint - none of them actually filter by role despite their
+// route names. Verified by reading UserController.cs: GetAllAdminsAsync,
+// GetAllExplorersAsync, and GetAllVendorsAsync share one identical body. This
+// returns every user regardless of role, not admins-only - kept here as the
+// literal binding for this endpoint, but NOT used by listUsers()/the Admins
+// tab below, which needs real per-role filtering and gets it via the
+// client-side filterRolePage() workaround against the generic /User list
+// instead.
+export function listAdmins(page: number, pageSize: number) {
+  return apiClient<PagedResult<UserSummaryDto>>({
+    method: 'GET',
+    url: '/User/admins',
+    params: { page, pageSize },
+  });
+}
+
 export function listUsers(role: ManageableRole, page: number, pageSize: number, includeDeleted: boolean) {
   return apiClient<PagedResult<UserSummaryDto>>({
     method: 'GET',
@@ -33,8 +59,8 @@ function roleToUserRole(role: ManageableRole): UserRole {
 
 function normalizeRole(role: UserSummaryDto['role']): UserRole | undefined {
   if (role === 0) return 'Explorer';
-  if (role === 1) return 'Vendor';
-  if (role === 2) return 'Admin';
+  if (role === 1) return 'Admin';
+  if (role === 2) return 'Vendor';
   if (role === 'Admin' || role === 'Vendor' || role === 'Explorer') return role;
   return undefined;
 }
@@ -86,6 +112,16 @@ export function restoreUser(_role: ManageableRole, id: string) {
   return apiClient<string>({
     method: 'PUT',
     url: `/User/restore/${id}`,
+  });
+}
+
+// Self-deletion only: the backend guards GetCurrentUserId() === id,
+// so this can only be called with the currently-authenticated admin's own id.
+// Returns 204 No Content on success.
+export function permanentDeleteSelf(id: string) {
+  return apiClientNoContent({
+    method: 'DELETE',
+    url: `/User/permanent/${id}`,
   });
 }
 
