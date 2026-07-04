@@ -1,0 +1,156 @@
+- generic:
+  - generic:
+    - generic:
+      - complementary:
+        - button:
+          - img
+        - generic:
+          - generic:
+            - generic:
+              - img
+            - generic:
+              - paragraph: Rahal
+              - paragraph: Relic Modernism
+          - navigation:
+            - link:
+              - /url: /vendor/profile
+              - img
+              - text: Profile
+          - generic:
+            - generic:
+              - paragraph: Vendor workspace
+              - paragraph: zeyadsattar.me222@gmail.com
+            - button:
+              - img
+              - text: Sign out
+      - generic:
+        - banner:
+          - button:
+            - img
+          - generic:
+            - img
+            - searchbox
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button: ZE
+        - main:
+          - generic:
+            - generic:
+              - paragraph: Vendor
+              - heading [level=1]: Vendor profile
+              - paragraph: Business identity and approval state used across vendor-managed listings.
+          - generic:
+            - generic:
+              - img
+            - heading [level=2]: Set up your vendor profile
+            - paragraph: Complete your business profile to start managing listings. An admin will review and approve it.
+            - button: Create profile
+  - dialog "Set up vendor profile" [ref=e236]:
+    - generic [ref=e237]:
+      - generic [ref=e238]:
+        - heading "Set up vendor profile" [level=2] [ref=e239]
+        - paragraph [ref=e240]: Business profile details and approval metadata.
+      - button "Close dialog" [active] [ref=e241]:
+        - img [ref=e242]
+    - generic [ref=e245]:
+      - generic [ref=e246]:
+        - generic [ref=e247]:
+          - generic [ref=e248]:
+            - text: Display name
+            - textbox "Display name" [ref=e249]
+          - generic [ref=e250]:
+            - text: Business category
+            - combobox "Business category" [ref=e251]:
+              - option "Choose business category" [selected]
+              - option
+              - option
+              - option
+              - option
+          - generic [ref=e252]:
+            - text: Profile picture
+            - button "Profile picture" [ref=e253]
+          - generic [ref=e254]:
+            - text: Address
+            - textbox "Address" [ref=e255]
+          - generic [ref=e256]:
+            - text: Address URL
+            - textbox "Address URL" [ref=e257]
+        - generic [ref=e258]:
+          - paragraph [ref=e260]: Working hours
+          - generic [ref=e261]:
+            - generic [ref=e262]:
+              - generic [ref=e263]:
+                - checkbox "Sunday" [ref=e264]
+                - text: Sunday
+              - generic [ref=e265]:
+                - text: Opens
+                - textbox "Opens" [disabled] [ref=e266]: 09:00
+              - generic [ref=e267]:
+                - text: Closes
+                - textbox "Closes" [disabled] [ref=e268]: 17:00
+            - generic [ref=e269]:
+              - generic [ref=e270]:
+                - checkbox "Monday" [ref=e271]
+                - text: Monday
+              - generic [ref=e272]:
+                - text: Opens
+                - textbox "Opens" [disabled] [ref=e273]: 09:00
+              - generic [ref=e274]:
+                - text: Closes
+                - textbox "Closes" [disabled] [ref=e275]: 17:00
+            - generic [ref=e276]:
+              - generic [ref=e277]:
+                - checkbox "Tuesday" [ref=e278]
+                - text: Tuesday
+              - generic [ref=e279]:
+                - text: Opens
+                - textbox "Opens" [disabled] [ref=e280]: 09:00
+              - generic [ref=e281]:
+                - text: Closes
+                - textbox "Closes" [disabled] [ref=e282]: 17:00
+            - generic [ref=e283]:
+              - generic [ref=e284]:
+                - checkbox "Wednesday" [ref=e285]
+                - text: Wednesday
+              - generic [ref=e286]:
+                - text: Opens
+                - textbox "Opens" [disabled] [ref=e287]: 09:00
+              - generic [ref=e288]:
+                - text: Closes
+                - textbox "Closes" [disabled] [ref=e289]: 17:00
+            - generic [ref=e290]:
+              - generic [ref=e291]:
+                - checkbox "Thursday" [ref=e292]
+                - text: Thursday
+              - generic [ref=e293]:
+                - text: Opens
+                - textbox "Opens" [disabled] [ref=e294]: 09:00
+              - generic [ref=e295]:
+                - text: Closes
+                - textbox "Closes" [disabled] [ref=e296]: 17:00
+            - generic [ref=e297]:
+              - generic [ref=e298]:
+                - checkbox "Friday" [ref=e299]
+                - text: Friday
+              - generic [ref=e300]:
+                - text: Opens
+                - textbox "Opens" [disabled] [ref=e301]: 09:00
+              - generic [ref=e302]:
+                - text: Closes
+                - textbox "Closes" [disabled] [ref=e303]: 17:00
+            - generic [ref=e304]:
+              - generic [ref=e305]:
+                - checkbox "Saturday" [ref=e306]
+                - text: Saturday
+              - generic [ref=e307]:
+                - text: Opens
+                - textbox "Opens" [disabled] [ref=e308]: 09:00
+              - generic [ref=e309]:
+                - text: Closes
+                - textbox "Closes" [disabled] [ref=e310]: 17:00
+      - generic [ref=e311]:
+        - button "Cancel" [ref=e312]
+        - button "Create profile" [ref=e313]

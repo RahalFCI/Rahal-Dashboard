@@ -36,3 +36,40 @@ export interface VendorCategoryDto {
   id: string;
   name: string;
 }
+
+export interface VendorBranchAddressDto {
+  addressLine: string;
+  government: string;
+  city: string;
+  country: string;
+}
+
+export interface VendorBranchDto {
+  id: string;
+  vendorId: string;
+  placeId: string;
+  branchName: string;
+  phoneNumber: string;
+  notes: string;
+  isActive: boolean;
+  placeName: string;
+  description: string;
+  latitude: number;
+  longitude: number;
+  geoFenceRange: number;
+  address: VendorBranchAddressDto | null;
+}
+
+export interface UpsertVendorBranchDto {
+  vendorId?: string;
+  branchName: string;
+  phoneNumber: string;
+  notes: string;
+  isActive?: boolean;
+  placeName: string;
+  description: string;
+  latitude: number;
+  longitude: number;
+  geoFenceRange: number;
+  address: VendorBranchAddressDto;
+}

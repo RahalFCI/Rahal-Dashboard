@@ -6,6 +6,7 @@ import { AchievementsPage } from '@/features/achievements/pages/AchievementsPage
 import { BadgesPage } from '@/features/badges/pages/BadgesPage';
 import { ChallengesPage } from '@/features/challenges/pages/ChallengesPage';
 import { CouponsPage } from '@/features/coupons/pages/CouponsPage';
+import { VendorCouponsPage } from '@/features/coupons/pages/VendorCouponsPage';
 import { CheckInChallengesPage } from '@/features/checkInChallenges/pages/CheckInChallengesPage';
 import { CheckInsPage } from '@/features/checkIns/pages/CheckInsPage';
 import { ExplorerAchievementsPage } from '@/features/explorerAchievements/pages/ExplorerAchievementsPage';
@@ -16,14 +17,13 @@ import { UserStatsPage } from '@/features/userStats/pages/UserStatsPage';
 import { PlanTiersPage } from '@/features/planTiers/pages/PlanTiersPage';
 import { RedeemCouponPage } from '@/features/userCoupons/pages/RedeemCouponPage';
 import { UserCouponLookupPage } from '@/features/userCoupons/pages/UserCouponLookupPage';
+import { VendorBranchesPage } from '@/features/vendors/pages/VendorBranchesPage';
 import { VendorDashboardPage } from '@/features/vendors/pages/VendorDashboardPage';
-import { VendorPlaceDetailPage } from '@/features/vendors/pages/VendorPlaceDetailPage';
-import { VendorPlacesPage } from '@/features/vendors/pages/VendorPlacesPage';
 import { VendorProfilePage } from '@/features/vendors/pages/VendorProfilePage';
 import { UserManagementPage } from '@/features/users/pages/UserManagementPage';
 import { VendorManagementPage } from '@/features/users/pages/VendorManagementPage';
 import { AppShell } from '@/shared/layout/AppShell';
-import { RequireAuth } from './route-guards';
+import { RequireApprovedVendor, RequireAuth } from './route-guards';
 
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -177,18 +177,22 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: 'vendor/places',
+        path: 'vendor/branches',
         element: (
           <RequireAuth roles={['Vendor']}>
-            <VendorPlacesPage />
+            <RequireApprovedVendor>
+              <VendorBranchesPage />
+            </RequireApprovedVendor>
           </RequireAuth>
         ),
       },
       {
-        path: 'vendor/places/:placeId',
+        path: 'vendor/coupons',
         element: (
           <RequireAuth roles={['Vendor']}>
-            <VendorPlaceDetailPage />
+            <RequireApprovedVendor>
+              <VendorCouponsPage />
+            </RequireApprovedVendor>
           </RequireAuth>
         ),
       },
@@ -196,7 +200,9 @@ const router = createBrowserRouter([
         path: 'vendor/redeem',
         element: (
           <RequireAuth roles={['Vendor']}>
-            <RedeemCouponPage />
+            <RequireApprovedVendor>
+              <RedeemCouponPage />
+            </RequireApprovedVendor>
           </RequireAuth>
         ),
       },

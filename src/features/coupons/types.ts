@@ -14,3 +14,15 @@ export interface GetCouponDto {
   expiresAt: string;
   isActive: boolean;
 }
+
+export interface CouponStatsDto {
+  couponId: string;
+  totalClaims: number;
+  redeemedCount: number;
+  claimedCount: number;
+  pendingCount: number;
+  expiredCount: number;
+  cancelledCount: number;
+  redemptionRate: number;
+  lastRedeemedAt: string | null;
+}

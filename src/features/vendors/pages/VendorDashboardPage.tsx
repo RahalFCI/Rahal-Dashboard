@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { Clock, Mail, MailCheck } from 'lucide-react';
+import { Building2, Clock, Mail, MailCheck } from 'lucide-react';
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ApiError } from '@/shared/api/errors';
 import { Button } from '@/shared/components/ui/button';
 import { useAuthStore } from '@/features/auth/store/authStore';
@@ -22,7 +22,7 @@ function VerifyEmailGate({ email }: { email: string }) {
           <Mail size={24} />
         </span>
 
-        <p className="mt-6 text-[11px] font-bold uppercase tracking-[0.18em] text-primary">Step 1 of 2</p>
+        <p className="mt-6 text-[11px] font-bold uppercase tracking-[0.18em] text-primary">Step 1 of 3</p>
         <h1 className="mt-3 text-2xl font-semibold text-on-surface">Verify your email</h1>
         <p className="mt-3 text-sm leading-relaxed text-on-surface-variant">
           We sent a 6-digit code to{' '}
@@ -51,6 +51,32 @@ function VerifyEmailGate({ email }: { email: string }) {
 
 const ADMIN_EMAIL = 'admin@rahal.com';
 
+function ProfileSetupGate({ email }: { email: string }) {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center px-4">
+      <div className="w-full max-w-md text-center">
+        <span className="mx-auto grid size-14 place-items-center rounded-xl bg-primary-container text-primary">
+          <Building2 size={24} />
+        </span>
+
+        <p className="mt-6 text-[11px] font-bold uppercase tracking-[0.18em] text-primary">Step 2 of 3</p>
+        <h1 className="mt-3 text-2xl font-semibold text-on-surface">Create your vendor profile</h1>
+        <p className="mt-3 text-sm leading-relaxed text-on-surface-variant">
+          Your account is signed in as{' '}
+          <span className="font-medium text-on-surface">{email}</span>. Add your business details so the admin
+          team has a profile to review.
+        </p>
+
+        <div className="mt-8">
+          <Button asChild className="w-full">
+            <Link to="/vendor/profile">Create profile</Link>
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PendingApprovalGate({ email }: { email: string }) {
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4">
@@ -59,10 +85,10 @@ function PendingApprovalGate({ email }: { email: string }) {
           <Clock size={24} />
         </span>
 
-        <p className="mt-6 text-[11px] font-bold uppercase tracking-[0.18em] text-primary">Step 2 of 2</p>
+        <p className="mt-6 text-[11px] font-bold uppercase tracking-[0.18em] text-primary">Step 3 of 3</p>
         <h1 className="mt-3 text-2xl font-semibold text-on-surface">Awaiting admin approval</h1>
         <p className="mt-3 text-sm leading-relaxed text-on-surface-variant">
-          Your email is confirmed. Our team will review your account and activate it — usually within one
+          Your vendor profile has been submitted. Our team will review it and activate your workspace - usually within one
           business day. We'll notify you at{' '}
           <span className="font-medium text-on-surface">{email}</span> once you're approved.
         </p>
@@ -101,6 +127,7 @@ export function VendorDashboardPage() {
   });
 
   const isApproved = profileQuery.data?.isApproved === true;
+  const noProfile = profileQuery.isError && profileQuery.error instanceof ApiError && profileQuery.error.code === 'NOT_FOUND';
 
   // emailConfirmed comes from JWT if the backend includes the claim.
   // undefined means the backend doesn't send it — skip that gate and rely on isApproved.
@@ -127,7 +154,11 @@ export function VendorDashboardPage() {
     return <VerifyEmailGate email={email} />;
   }
 
-  // Not approved (profile missing or isApproved === false)
+  if (noProfile) {
+    return <ProfileSetupGate email={email} />;
+  }
+
+  // Profile exists but isApproved === false
   if (!isApproved) {
     return <PendingApprovalGate email={email} />;
   }

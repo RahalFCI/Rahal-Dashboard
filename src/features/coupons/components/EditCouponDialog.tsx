@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { Button } from '@/shared/components/ui/button';
 import { Dialog } from '@/shared/components/ui/dialog';
 import { FieldError } from '@/shared/components/ui/field-error';
@@ -32,7 +32,7 @@ function discountTypeToInt(type: string) {
 
 export function EditCouponDialog({ coupon, open, onOpenChange, onSubmit, serverError }: Props) {
   const form = useForm<UpdateCouponFormValues>({
-    resolver: zodResolver(updateCouponSchema),
+    resolver: zodResolver(updateCouponSchema) as Resolver<UpdateCouponFormValues>,
     defaultValues: {
       description: '',
       xpCost: 0,

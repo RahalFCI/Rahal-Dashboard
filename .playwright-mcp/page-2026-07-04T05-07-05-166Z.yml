@@ -1,0 +1,44 @@
+- generic [ref=f1e2]:
+  - generic [ref=f1e3]:
+    - complementary [ref=f1e4]:
+      - button [ref=f1e5]:
+        - img [ref=f1e6]
+      - generic [ref=f1e9]:
+        - generic [ref=f1e10]:
+          - img [ref=f1e12]
+          - generic [ref=f1e15]:
+            - paragraph [ref=f1e16]: Rahal
+            - paragraph [ref=f1e17]: Relic Modernism
+        - navigation [ref=f1e18]:
+          - link "Profile" [ref=f1e19] [cursor=pointer]:
+            - /url: /vendor/profile
+            - img [ref=f1e20]
+            - text: Profile
+        - generic [ref=f1e25]:
+          - generic [ref=f1e26]:
+            - paragraph [ref=f1e27]: Vendor workspace
+            - paragraph [ref=f1e28]: zeyadsattar.me222@gmail.com
+          - button "Sign out" [ref=f1e29]:
+            - img [ref=f1e30]
+            - text: Sign out
+    - generic [ref=f1e33]:
+      - banner [ref=f1e34]:
+        - button [ref=f1e35]:
+          - img [ref=f1e36]
+        - generic [ref=f1e37]:
+          - img [ref=f1e38]
+          - searchbox "Search across everything..." [ref=f1e41]
+        - generic [ref=f1e42]:
+          - button [ref=f1e43]:
+            - img [ref=f1e44]
+          - button [ref=f1e47]:
+            - img [ref=f1e48]
+          - button "ZE" [ref=f1e51]
+      - main [ref=f1e52]:
+        - generic [ref=f1e54]:
+          - paragraph [ref=f1e55]: Vendor
+          - heading "Vendor profile" [level=1] [ref=f1e56]
+          - paragraph [ref=f1e57]: Business identity and approval state used across vendor-managed listings.
+        - generic [ref=f1e58]: Loading profile...
+  - region "Notifications (F8)":
+    - list

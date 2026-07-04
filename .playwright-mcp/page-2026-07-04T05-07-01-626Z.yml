@@ -1,0 +1,46 @@
+- generic [ref=e2]:
+  - generic [ref=e95]:
+    - complementary [ref=e96]:
+      - button [ref=e97]:
+        - img [ref=e98]
+      - generic [ref=e101]:
+        - generic [ref=e102]:
+          - img [ref=e104]
+          - generic [ref=e107]:
+            - paragraph [ref=e108]: Rahal
+            - paragraph [ref=e109]: Relic Modernism
+        - navigation [ref=e110]:
+          - link "Profile" [ref=e111] [cursor=pointer]:
+            - /url: /vendor/profile
+            - img [ref=e112]
+            - text: Profile
+        - generic [ref=e117]:
+          - generic [ref=e118]:
+            - paragraph [ref=e119]: Vendor workspace
+            - paragraph [ref=e120]: zeyadsattar.me222@gmail.com
+          - button "Sign out" [ref=e121]:
+            - img [ref=e122]
+            - text: Sign out
+    - generic [ref=e125]:
+      - banner [ref=e126]:
+        - button [ref=e127]:
+          - img [ref=e128]
+        - generic [ref=e129]:
+          - img [ref=e130]
+          - searchbox "Search across everything..." [ref=e133]
+        - generic [ref=e134]:
+          - button [ref=e135]:
+            - img [ref=e136]
+          - button [ref=e139]:
+            - img [ref=e140]
+          - button "ZE" [ref=e143]
+      - main [ref=e144]:
+        - generic [ref=e146]:
+          - img [ref=e148]
+          - paragraph [ref=e152]: Step 2 of 3
+          - heading "Create your vendor profile" [level=1] [ref=e153]
+          - paragraph [ref=e154]: Your account is signed in as zeyadsattar.me222@gmail.com. Add your business details so the admin team has a profile to review.
+          - link "Create profile" [ref=e156] [cursor=pointer]:
+            - /url: /vendor/profile
+  - region "Notifications (F8)":
+    - list

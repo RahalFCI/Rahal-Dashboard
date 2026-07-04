@@ -9,7 +9,7 @@ import { Panel } from '@/shared/components/ui/panel';
 import { ErrorState, LoadingState } from '@/shared/layout/DataState';
 import { PageHeader } from '@/shared/layout/PageHeader';
 import { useAuthStore } from '@/features/auth/store/authStore';
-import { listCategories } from '@/features/places/api/placesApi';
+import { listVendorCategories } from '../api/vendorCategoryApi';
 import {
   createVendorProfile,
   getVendorProfile,
@@ -32,8 +32,8 @@ export function VendorProfilePage() {
   });
 
   const categoriesQuery = useQuery({
-    queryKey: ['place-categories'],
-    queryFn: listCategories,
+    queryKey: ['vendor-categories'],
+    queryFn: listVendorCategories,
   });
 
   const updateMutation = useMutation({
@@ -49,8 +49,7 @@ export function VendorProfilePage() {
 
   const createMutation = useMutation({
     mutationFn: async ({ values, file }: { values: UpsertVendorProfileDto; file?: File | null }) => {
-      await createVendorProfile(values);
-      if (file) await updateVendorProfilePicture(values.userId, file);
+      await createVendorProfile(values, file);
     },
     onSuccess: () => {
       setSetupOpen(false);
