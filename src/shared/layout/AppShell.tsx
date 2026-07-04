@@ -37,6 +37,8 @@ interface NavItem {
   label: string;
   icon: ReactNode;
   roles: UserRole[];
+  // Set to true to hide this item from the sidebar without removing its route/page/code.
+  hidden?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -49,7 +51,7 @@ const navItems: NavItem[] = [
   { to: '/admin/achievements', label: 'Achievement catalog', icon: <Trophy size={17} />, roles: ['Admin'] },
   { to: '/admin/badges', label: 'Badges', icon: <Medal size={17} />, roles: ['Admin'] },
   { to: '/admin/check-ins', label: 'Check-ins', icon: <CheckSquare size={17} />, roles: ['Admin'] },
-  { to: '/admin/check-in-challenges', label: 'Check-in challenges', icon: <FlagTriangleRight size={17} />, roles: ['Admin'] },
+  { to: '/admin/check-in-challenges', label: 'Check-in challenges', icon: <FlagTriangleRight size={17} />, roles: ['Admin'], hidden: true },
   { to: '/admin/challenges', label: 'Challenges', icon: <Swords size={17} />, roles: ['Admin'] },
   { to: '/admin/coupons', label: 'Coupons', icon: <Ticket size={17} />, roles: ['Admin'] },
   { to: '/admin/user-coupon-lookup', label: 'Coupon lookup', icon: <ScanLine size={17} />, roles: ['Admin'] },
@@ -135,7 +137,7 @@ export function AppShell() {
   const navigate = useNavigate();
   const { user, clearSession } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const visibleItems = navItems.filter((item) => user && item.roles.includes(user.role));
+  const visibleItems = navItems.filter((item) => user && item.roles.includes(user.role) && !item.hidden);
 
   const avatarInitials = user?.email ? user.email.slice(0, 2).toUpperCase() : 'U';
 
