@@ -1,0 +1,95 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - button [ref=e5]:
+        - img [ref=e6]
+      - generic [ref=e9]:
+        - generic [ref=e10]:
+          - img [ref=e12]
+          - generic [ref=e15]:
+            - paragraph [ref=e16]: Rahal
+            - paragraph [ref=e17]: Relic Modernism
+        - navigation [ref=e18]:
+          - link "Users" [ref=e19] [cursor=pointer]:
+            - /url: /admin/users
+            - img [ref=e20]
+            - text: Users
+          - link "Vendors" [ref=e25] [cursor=pointer]:
+            - /url: /admin/vendors
+            - img [ref=e26]
+            - text: Vendors
+          - link "Places" [ref=e30] [cursor=pointer]:
+            - /url: /admin/places
+            - img [ref=e31]
+            - text: Places
+          - link "User & Explorer Search" [ref=e35] [cursor=pointer]:
+            - /url: /admin/search
+            - img [ref=e36]
+            - text: User & Explorer Search
+          - link "User stats" [ref=e39] [cursor=pointer]:
+            - /url: /admin/user-stats
+            - img [ref=e40]
+            - text: User stats
+          - link "Earned achievements" [ref=e43] [cursor=pointer]:
+            - /url: /admin/explorer-achievements
+            - img [ref=e44]
+            - text: Earned achievements
+          - link "Achievement catalog" [ref=e47] [cursor=pointer]:
+            - /url: /admin/achievements
+            - img [ref=e48]
+            - text: Achievement catalog
+          - link "Badges" [ref=e54] [cursor=pointer]:
+            - /url: /admin/badges
+            - img [ref=e55]
+            - text: Badges
+          - link "Check-ins" [ref=e61] [cursor=pointer]:
+            - /url: /admin/check-ins
+            - img [ref=e62]
+            - text: Check-ins
+          - link "Check-in challenges" [ref=e65] [cursor=pointer]:
+            - /url: /admin/check-in-challenges
+            - img [ref=e66]
+            - text: Check-in challenges
+          - link "Challenges" [ref=e68] [cursor=pointer]:
+            - /url: /admin/challenges
+            - img [ref=e69]
+            - text: Challenges
+          - link "Coupons" [ref=e78] [cursor=pointer]:
+            - /url: /admin/coupons
+            - img [ref=e79]
+            - text: Coupons
+          - link "Coupon lookup" [ref=e81] [cursor=pointer]:
+            - /url: /admin/user-coupon-lookup
+            - img [ref=e82]
+            - text: Coupon lookup
+          - link "Content moderation" [ref=e87] [cursor=pointer]:
+            - /url: /admin/content-moderation
+            - img [ref=e88]
+            - text: Content moderation
+          - link "Plan tiers" [ref=e90] [cursor=pointer]:
+            - /url: /admin/plan-tiers
+            - img [ref=e91]
+            - text: Plan tiers
+        - generic [ref=e95]:
+          - generic [ref=e96]:
+            - paragraph [ref=e97]: Admin workspace
+            - paragraph [ref=e98]: admin@rahal.com
+          - button "Sign out" [ref=e99]:
+            - img [ref=e100]
+            - text: Sign out
+    - generic [ref=e103]:
+      - banner [ref=e104]:
+        - button [ref=e105]:
+          - img [ref=e106]
+        - generic [ref=e107]:
+          - img [ref=e108]
+          - searchbox "Search across everything..." [ref=e111]
+        - generic [ref=e112]:
+          - button [ref=e113]:
+            - img [ref=e114]
+          - button [ref=e117]:
+            - img [ref=e118]
+          - button "AD" [ref=e121]
+      - main [ref=e122]
+  - region "Notifications (F8)":
+    - list

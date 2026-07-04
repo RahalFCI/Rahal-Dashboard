@@ -1,0 +1,48 @@
+- generic [ref=e2]:
+  - generic [ref=e159]:
+    - complementary [ref=e160]:
+      - button [ref=e161]:
+        - img [ref=e162]
+      - generic [ref=e165]:
+        - generic [ref=e166]:
+          - img [ref=e168]
+          - generic [ref=e171]:
+            - paragraph [ref=e172]: Rahal
+            - paragraph [ref=e173]: Relic Modernism
+        - navigation [ref=e174]:
+          - link "Profile" [ref=e175] [cursor=pointer]:
+            - /url: /vendor/profile
+            - img [ref=e176]
+            - text: Profile
+        - generic [ref=e181]:
+          - generic [ref=e182]:
+            - paragraph [ref=e183]: Vendor workspace
+            - paragraph [ref=e184]: zeyadsattar.me222@gmail.com
+          - button "Sign out" [ref=e185]:
+            - img [ref=e186]
+            - text: Sign out
+    - generic [ref=e189]:
+      - banner [ref=e190]:
+        - button [ref=e191]:
+          - img [ref=e192]
+        - generic [ref=e193]:
+          - img [ref=e194]
+          - searchbox "Search across everything..." [ref=e197]
+        - generic [ref=e198]:
+          - button [ref=e199]:
+            - img [ref=e200]
+          - button [ref=e203]:
+            - img [ref=e204]
+          - button "ZE" [ref=e207]
+      - main [ref=e208]:
+        - generic [ref=e222]:
+          - paragraph [ref=e223]: Vendor
+          - heading "Vendor profile" [level=1] [ref=e224]
+          - paragraph [ref=e225]: Business identity and approval state used across vendor-managed listings.
+        - generic [ref=e226]:
+          - img [ref=e228]
+          - heading "Set up your vendor profile" [level=2] [ref=e232]
+          - paragraph [ref=e233]: Complete your business profile to start managing listings. An admin will review and approve it.
+          - button "Create profile" [ref=e234]
+  - region "Notifications (F8)":
+    - list

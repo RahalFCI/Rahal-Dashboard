@@ -29,6 +29,7 @@ import { queryClient } from '@/shared/api/queryClient';
 import { logout } from '@/features/auth/api/authApi';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import type { UserRole } from '@/features/auth/types';
+import { useVendorApproval } from '@/features/vendors/hooks/useVendorApproval';
 import { cn } from '@/shared/lib/utils';
 
 interface NavItem {
@@ -36,6 +37,7 @@ interface NavItem {
   label: string;
   icon: ReactNode;
   roles: UserRole[];
+  requiresApprovedVendor?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -55,8 +57,9 @@ const navItems: NavItem[] = [
   { to: '/admin/content-moderation', label: 'Content moderation', icon: <ShieldAlert size={17} />, roles: ['Admin'] },
   { to: '/admin/plan-tiers', label: 'Plan tiers', icon: <Layers size={17} />, roles: ['Admin'] },
   { to: '/vendor/profile', label: 'Profile', icon: <LayoutDashboard size={17} />, roles: ['Vendor'] },
-  { to: '/vendor/places', label: 'My Places', icon: <FolderKanban size={17} />, roles: ['Vendor'] },
-  { to: '/vendor/redeem', label: 'Redeem coupon', icon: <Ticket size={17} />, roles: ['Vendor'] },
+  { to: '/vendor/branches', label: 'Branches', icon: <FolderKanban size={17} />, roles: ['Vendor'], requiresApprovedVendor: true },
+  { to: '/vendor/coupons', label: 'Coupons', icon: <Ticket size={17} />, roles: ['Vendor'], requiresApprovedVendor: true },
+  { to: '/vendor/redeem', label: 'Redeem customer coupon', icon: <Ticket size={17} />, roles: ['Vendor'], requiresApprovedVendor: true },
 ];
 
 function SidebarContent({
@@ -130,7 +133,12 @@ export function AppShell() {
   const navigate = useNavigate();
   const { user, clearSession } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const visibleItems = navItems.filter((item) => user && item.roles.includes(user.role));
+  const vendorApproval = useVendorApproval();
+  const visibleItems = navItems.filter((item) => {
+    if (!user || !item.roles.includes(user.role)) return false;
+    if (user.role === 'Vendor' && item.requiresApprovedVendor) return vendorApproval.isApproved;
+    return true;
+  });
 
   const avatarInitials = user?.email ? user.email.slice(0, 2).toUpperCase() : 'U';
 

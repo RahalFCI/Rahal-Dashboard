@@ -1,6 +1,7 @@
 import { apiClient } from '@/shared/api/client';
+import type { GetUserCouponDto } from '@/features/userCoupons/types';
 import type { PagedResult } from '@/shared/api/types';
-import type { GetCouponDto } from '../types';
+import type { CouponStatsDto, GetCouponDto } from '../types';
 
 export interface CreateCouponPayload {
   vendorId: string;
@@ -24,6 +25,26 @@ export function listCoupons(page: number, pageSize: number) {
   return apiClient<PagedResult<GetCouponDto>>({
     method: 'GET',
     url: '/Coupon',
+    params: { page, pageSize },
+  });
+}
+
+export function listMyVendorCoupons(page: number, pageSize: number) {
+  return apiClient<PagedResult<GetCouponDto>>({
+    method: 'GET',
+    url: '/Coupon/vendor/mine',
+    params: { page, pageSize },
+  });
+}
+
+export function getCouponStats(id: string) {
+  return apiClient<CouponStatsDto>({ method: 'GET', url: `/Coupon/${id}/stats` });
+}
+
+export function listCouponRedemptions(id: string, page: number, pageSize: number) {
+  return apiClient<PagedResult<GetUserCouponDto>>({
+    method: 'GET',
+    url: `/Coupon/${id}/redemptions`,
     params: { page, pageSize },
   });
 }

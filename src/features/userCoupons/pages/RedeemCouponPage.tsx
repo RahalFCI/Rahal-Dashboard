@@ -115,8 +115,8 @@ export function RedeemCouponPage() {
     <>
       <PageHeader
         eyebrow="Vendor"
-        title="Redeem coupon"
-        description="Enter or scan an explorer's coupon code to mark it as redeemed."
+        title="Redeem customer coupon"
+        description="Enter or scan an explorer's coupon code to mark it as used at checkout."
       />
 
       <div className="mx-auto max-w-lg space-y-6">

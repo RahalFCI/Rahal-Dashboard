@@ -1,19 +1,38 @@
 import { apiClient } from '@/shared/api/client';
 import type { VendorCategoryDto } from '../types';
 
+type RawVendorCategoryDto = VendorCategoryDto & {
+  Id?: string;
+  CategoryName?: string;
+  categoryName?: string;
+};
+
+function normalizeVendorCategory(category: RawVendorCategoryDto): VendorCategoryDto {
+  const id = category.id ?? category.Id ?? '';
+
+  return {
+    id,
+    name: category.name || category.categoryName || category.CategoryName || '',
+  };
+}
+
 export function listVendorCategories() {
-  return apiClient<VendorCategoryDto[]>({ method: 'GET', url: '/VendorCategory' });
+  return apiClient<RawVendorCategoryDto[]>({ method: 'GET', url: '/VendorCategory' }).then((categories) =>
+    categories.map(normalizeVendorCategory),
+  );
 }
 
 export function getVendorCategoryById(id: string) {
-  return apiClient<VendorCategoryDto>({ method: 'GET', url: `/VendorCategory/${id}` });
+  return apiClient<RawVendorCategoryDto>({ method: 'GET', url: `/VendorCategory/${id}` }).then(normalizeVendorCategory);
 }
 
 // Exact, case-sensitive match against CategoryName on the backend - "cafe"
 // will not match "Cafe". encodeURIComponent guards names with spaces or other
 // characters that aren't valid unescaped in a URL path segment.
 export function getVendorCategoryByName(name: string) {
-  return apiClient<VendorCategoryDto>({ method: 'GET', url: `/VendorCategory/name/${encodeURIComponent(name)}` });
+  return apiClient<RawVendorCategoryDto>({ method: 'GET', url: `/VendorCategory/name/${encodeURIComponent(name)}` }).then(
+    normalizeVendorCategory,
+  );
 }
 
 // The backend binds this as [FromBody] string CategoryName, so the request
@@ -22,12 +41,12 @@ export function getVendorCategoryByName(name: string) {
 // explicit Content-Type avoid relying on axios's default body-serialization
 // heuristics for a plain string value.
 export function createVendorCategory(categoryName: string) {
-  return apiClient<VendorCategoryDto>({
+  return apiClient<RawVendorCategoryDto>({
     method: 'POST',
     url: '/VendorCategory',
     data: JSON.stringify(categoryName),
     headers: { 'Content-Type': 'application/json' },
-  });
+  }).then(normalizeVendorCategory);
 }
 
 // Same raw-JSON-string-body requirement as create. NOTE: as of this backend

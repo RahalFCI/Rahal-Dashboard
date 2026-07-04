@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { listVendorProfiles } from '@/features/vendors/api/vendorProfileApi';
 import { Button } from '@/shared/components/ui/button';
 import { Dialog } from '@/shared/components/ui/dialog';
@@ -17,6 +17,8 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   onSubmit: (values: CreateCouponFormValues) => Promise<unknown>;
   serverError?: string | null;
+  fixedVendorId?: string;
+  vendorLabel?: string;
 }
 
 const defaultValues: CreateCouponFormValues = {
@@ -33,56 +35,63 @@ const defaultValues: CreateCouponFormValues = {
   isActive: true,
 };
 
-export function CreateCouponDialog({ open, onOpenChange, onSubmit, serverError }: Props) {
+export function CreateCouponDialog({ open, onOpenChange, onSubmit, serverError, fixedVendorId, vendorLabel }: Props) {
   const vendorsQuery = useQuery({
     queryKey: ['vendor-profiles-for-coupon'],
     queryFn: () => listVendorProfiles(1, 200),
+    enabled: !fixedVendorId,
   });
 
   const form = useForm<CreateCouponFormValues>({
-    resolver: zodResolver(createCouponSchema),
+    resolver: zodResolver(createCouponSchema) as Resolver<CreateCouponFormValues>,
     defaultValues,
   });
 
   useEffect(() => {
     if (!open) return;
-    form.reset(defaultValues);
-  }, [form, open]);
+    form.reset({ ...defaultValues, vendorId: fixedVendorId ?? '' });
+  }, [fixedVendorId, form, open]);
 
   const discountType = Number(form.watch('discountType'));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title="Create coupon">
       <form className="grid gap-4" onSubmit={form.handleSubmit(onSubmit)}>
-        {/* Vendor */}
-        <div>
-          <Label htmlFor="vendorId">Vendor</Label>
-          <Select id="vendorId" {...form.register('vendorId')}>
-            <option value="">Select vendor…</option>
-            {(vendorsQuery.data?.items ?? []).map((v) => (
-              <option key={v.userId} value={v.userId}>
-                {v.displayName}
-              </option>
-            ))}
-          </Select>
-          <FieldError message={form.formState.errors.vendorId?.message} />
-        </div>
+        {fixedVendorId ? (
+          <input type="hidden" {...form.register('vendorId')} />
+        ) : (
+          <div>
+            <Label htmlFor="vendorId">Vendor</Label>
+            <Select id="vendorId" {...form.register('vendorId')}>
+              <option value="">Select vendor...</option>
+              {(vendorsQuery.data?.items ?? []).map((v) => (
+                <option key={v.userId} value={v.userId}>
+                  {v.displayName}
+                </option>
+              ))}
+            </Select>
+            <FieldError message={form.formState.errors.vendorId?.message} />
+          </div>
+        )}
 
-        {/* Title */}
+        {fixedVendorId && vendorLabel ? (
+          <p className="text-sm text-on-surface-variant">
+            Creating coupon for <span className="font-medium text-on-surface">{vendorLabel}</span>
+          </p>
+        ) : null}
+
         <div>
           <Label htmlFor="title">Title</Label>
           <Input id="title" placeholder="e.g. 20% off your next visit" {...form.register('title')} />
           <FieldError message={form.formState.errors.title?.message} />
         </div>
 
-        {/* Description */}
         <div>
           <Label htmlFor="description">Description</Label>
           <Textarea id="description" placeholder="Optional details about this coupon" {...form.register('description')} />
           <FieldError message={form.formState.errors.description?.message} />
         </div>
 
-        {/* Discount type + value */}
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label htmlFor="discountType">Discount type</Label>
@@ -93,22 +102,13 @@ export function CreateCouponDialog({ open, onOpenChange, onSubmit, serverError }
             <FieldError message={form.formState.errors.discountType?.message} />
           </div>
           <div>
-            <Label htmlFor="discountValue">
-              Discount value {discountType === 1 ? '(%)' : '(EGP)'}
-            </Label>
-            <Input
-              id="discountValue"
-              type="number"
-              min="0.01"
-              step="0.01"
-              {...form.register('discountValue')}
-            />
+            <Label htmlFor="discountValue">Discount value {discountType === 1 ? '(%)' : '(EGP)'}</Label>
+            <Input id="discountValue" type="number" min="0.01" step="0.01" {...form.register('discountValue')} />
             <FieldError message={form.formState.errors.discountValue?.message} />
           </div>
         </div>
 
-        {/* Max discount value — only useful for percentage discounts */}
-        {discountType === 1 && (
+        {discountType === 1 ? (
           <div>
             <Label htmlFor="maxDiscountValue">Max discount cap (EGP, optional)</Label>
             <Input
@@ -121,9 +121,8 @@ export function CreateCouponDialog({ open, onOpenChange, onSubmit, serverError }
             />
             <FieldError message={form.formState.errors.maxDiscountValue?.message} />
           </div>
-        )}
+        ) : null}
 
-        {/* Minimum charge + XP cost */}
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label htmlFor="minimumCharge">Minimum charge (EGP)</Label>
@@ -137,7 +136,6 @@ export function CreateCouponDialog({ open, onOpenChange, onSubmit, serverError }
           </div>
         </div>
 
-        {/* Max claims + expiry */}
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label htmlFor="maxClaims">Max claims</Label>
@@ -151,15 +149,8 @@ export function CreateCouponDialog({ open, onOpenChange, onSubmit, serverError }
           </div>
         </div>
 
-        {/* Is active */}
         <div className="flex items-center gap-3">
-          <input
-            id="isActive"
-            type="checkbox"
-            className="size-4 accent-primary"
-            {...form.register('isActive')}
-            defaultChecked
-          />
+          <input id="isActive" type="checkbox" className="size-4 accent-primary" {...form.register('isActive')} />
           <Label htmlFor="isActive" className="cursor-pointer">
             Active (visible to explorers)
           </Label>

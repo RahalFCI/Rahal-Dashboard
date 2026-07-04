@@ -1,0 +1,156 @@
+- generic:
+  - generic:
+    - generic:
+      - complementary:
+        - button:
+          - img
+        - generic:
+          - generic:
+            - generic:
+              - img
+            - generic:
+              - paragraph: Rahal
+              - paragraph: Relic Modernism
+          - navigation:
+            - link:
+              - /url: /vendor/profile
+              - img
+              - text: Profile
+          - generic:
+            - generic:
+              - paragraph: Vendor workspace
+              - paragraph: zeyadsattar.me222@gmail.com
+            - button:
+              - img
+              - text: Sign out
+      - generic:
+        - banner:
+          - button:
+            - img
+          - generic:
+            - img
+            - searchbox
+          - generic:
+            - button:
+              - img
+            - button:
+              - img
+            - button: ZE
+        - main:
+          - generic:
+            - generic:
+              - paragraph: Vendor
+              - heading [level=1]: Vendor profile
+              - paragraph: Business identity and approval state used across vendor-managed listings.
+          - generic:
+            - generic:
+              - img
+            - heading [level=2]: Set up your vendor profile
+            - paragraph: Complete your business profile to start managing listings. An admin will review and approve it.
+            - button: Create profile
+  - dialog "Set up vendor profile" [ref=f1e69]:
+    - generic [ref=f1e70]:
+      - generic [ref=f1e71]:
+        - heading "Set up vendor profile" [level=2] [ref=f1e72]
+        - paragraph [ref=f1e73]: Business profile details and approval metadata.
+      - button "Close dialog" [ref=f1e74]:
+        - img [ref=f1e75]
+    - generic [ref=f1e78]:
+      - generic [ref=f1e79]:
+        - generic [ref=f1e80]:
+          - generic [ref=f1e81]:
+            - text: Display name
+            - textbox "Display name" [ref=f1e82]: Rahal Test Vendor
+          - generic [ref=f1e83]:
+            - text: Business category
+            - combobox "Business category" [ref=f1e84]:
+              - option "Choose business category"
+              - option "Cafes & Eateries"
+              - option "Tours & Cruises" [selected]
+              - option "Shops & Bazaars"
+              - option "Dive & Adventure"
+          - generic [ref=f1e85]:
+            - text: Profile picture
+            - button "Profile picture" [ref=f1e86]
+          - generic [ref=f1e87]:
+            - text: Address
+            - textbox "Address" [ref=f1e88]: Maadi, Cairo
+          - generic [ref=f1e89]:
+            - text: Address URL
+            - textbox "Address URL" [active] [ref=f1e90]: https://maps.app.goo.gl/qM6mVP5eWbzEpjhb9
+        - generic [ref=f1e91]:
+          - paragraph [ref=f1e93]: Working hours
+          - generic [ref=f1e94]:
+            - generic [ref=f1e95]:
+              - generic [ref=f1e96]:
+                - checkbox "Sunday" [ref=f1e97]
+                - text: Sunday
+              - generic [ref=f1e98]:
+                - text: Opens
+                - textbox "Opens" [disabled] [ref=f1e99]: 09:00
+              - generic [ref=f1e100]:
+                - text: Closes
+                - textbox "Closes" [disabled] [ref=f1e101]: 17:00
+            - generic [ref=f1e102]:
+              - generic [ref=f1e103]:
+                - checkbox "Monday" [ref=f1e104]
+                - text: Monday
+              - generic [ref=f1e105]:
+                - text: Opens
+                - textbox "Opens" [disabled] [ref=f1e106]: 09:00
+              - generic [ref=f1e107]:
+                - text: Closes
+                - textbox "Closes" [disabled] [ref=f1e108]: 17:00
+            - generic [ref=f1e109]:
+              - generic [ref=f1e110]:
+                - checkbox "Tuesday" [ref=f1e111]
+                - text: Tuesday
+              - generic [ref=f1e112]:
+                - text: Opens
+                - textbox "Opens" [disabled] [ref=f1e113]: 09:00
+              - generic [ref=f1e114]:
+                - text: Closes
+                - textbox "Closes" [disabled] [ref=f1e115]: 17:00
+            - generic [ref=f1e116]:
+              - generic [ref=f1e117]:
+                - checkbox "Wednesday" [ref=f1e118]
+                - text: Wednesday
+              - generic [ref=f1e119]:
+                - text: Opens
+                - textbox "Opens" [disabled] [ref=f1e120]: 09:00
+              - generic [ref=f1e121]:
+                - text: Closes
+                - textbox "Closes" [disabled] [ref=f1e122]: 17:00
+            - generic [ref=f1e123]:
+              - generic [ref=f1e124]:
+                - checkbox "Thursday" [ref=f1e125]
+                - text: Thursday
+              - generic [ref=f1e126]:
+                - text: Opens
+                - textbox "Opens" [disabled] [ref=f1e127]: 09:00
+              - generic [ref=f1e128]:
+                - text: Closes
+                - textbox "Closes" [disabled] [ref=f1e129]: 17:00
+            - generic [ref=f1e130]:
+              - generic [ref=f1e131]:
+                - checkbox "Friday" [ref=f1e132]
+                - text: Friday
+              - generic [ref=f1e133]:
+                - text: Opens
+                - textbox "Opens" [disabled] [ref=f1e134]: 09:00
+              - generic [ref=f1e135]:
+                - text: Closes
+                - textbox "Closes" [disabled] [ref=f1e136]: 17:00
+            - generic [ref=f1e137]:
+              - generic [ref=f1e138]:
+                - checkbox "Saturday" [ref=f1e139]
+                - text: Saturday
+              - generic [ref=f1e140]:
+                - text: Opens
+                - textbox "Opens" [disabled] [ref=f1e141]: 09:00
+              - generic [ref=f1e142]:
+                - text: Closes
+                - textbox "Closes" [disabled] [ref=f1e143]: 17:00
+      - generic [ref=f1e144]:
+        - button "Cancel" [ref=f1e145]
+        - button "Create profile" [ref=f1e146]

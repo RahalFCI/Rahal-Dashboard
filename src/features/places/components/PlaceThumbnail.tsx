@@ -8,8 +8,6 @@ interface PlaceThumbnailProps {
 }
 
 export function PlaceThumbnail({ placeId }: PlaceThumbnailProps) {
-  // Same query key VendorPlaceDetailPage uses for this place's photos, so the
-  // cache is shared if both are visited in the same session.
   const photosQuery = useQuery({
     queryKey: ['place-photos', placeId],
     queryFn: () => listPlacePhotos(placeId),

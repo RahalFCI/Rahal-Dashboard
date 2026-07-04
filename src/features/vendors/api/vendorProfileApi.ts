@@ -8,6 +8,7 @@ export function getVendorProfile(userId: string) {
   return apiClient<VendorProfileDto>({
     method: 'GET',
     url: `/VendorProfile/${userId}`,
+    suppressToastCodes: ['NOT_FOUND'],
   });
 }
 
@@ -42,11 +43,11 @@ export function approveVendorProfile(userId: string) {
   });
 }
 
-export function createVendorProfile(body: UpsertVendorProfileDto) {
+export function createVendorProfile(body: UpsertVendorProfileDto, profilePicture?: File | null) {
   return apiClient<string>({
     method: 'POST',
     url: '/VendorProfile/create',
-    data: toVendorProfileFormData(body),
+    data: toVendorProfileFormData(body, profilePicture),
   });
 }
 
@@ -68,7 +69,7 @@ export function updateVendorProfilePicture(userId: string, profilePicture: File)
   });
 }
 
-function toVendorProfileFormData(body: UpsertVendorProfileDto) {
+function toVendorProfileFormData(body: UpsertVendorProfileDto, profilePicture?: File | null) {
   const formData = new FormData();
   formData.append('UserId', body.userId);
   formData.append('DisplayName', body.displayName);
@@ -77,6 +78,9 @@ function toVendorProfileFormData(body: UpsertVendorProfileDto) {
   formData.append('Address', body.address);
   formData.append('AddressUrl', body.addressUrl);
   formData.append('CategoryId', body.categoryId);
+  // The create endpoint binds this file to its [FromForm] IFormFile? profilePicture
+  // parameter and uploads it in the same request - no separate update-picture call.
+  if (profilePicture) formData.append('profilePicture', profilePicture);
 
   appendWorkingHours(formData, body.workingHours);
   return formData;

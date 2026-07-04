@@ -3,10 +3,14 @@ import { env } from '@/config/env';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { refreshTokens } from '@/features/auth/api/authApi';
 import { useToastStore } from '@/shared/stores/toastStore';
-import { ApiError, ApiValidationError, resolveErrorCode } from './errors';
+import { ApiError, ApiValidationError, type ErrorCode, resolveErrorCode } from './errors';
 import type { ApiResponse, ValidationErrorResponse } from './types';
 
 type RetriableRequestConfig = AxiosRequestConfig & { _retry?: boolean };
+type ApiClientConfig = AxiosRequestConfig & {
+  suppressToast?: boolean;
+  suppressToastCodes?: ErrorCode[];
+};
 
 export const axiosInstance = axios.create({
   baseURL: env.API_BASE_URL,
@@ -71,13 +75,14 @@ axiosInstance.interceptors.response.use(
   },
 );
 
-function maybeToast(err: ApiError) {
+function maybeToast(err: ApiError, config?: ApiClientConfig) {
+  if (config?.suppressToast || config?.suppressToastCodes?.includes(err.code)) return;
   if (err.tier === 'toast') {
     useToastStore.getState().add({ message: err.message, variant: 'error' });
   }
 }
 
-export async function apiClient<T>(config: AxiosRequestConfig): Promise<T> {
+export async function apiClient<T>(config: ApiClientConfig): Promise<T> {
   try {
     const response = await axiosInstance.request<ApiResponse<T>>(config);
     const body = response.data;
@@ -87,7 +92,7 @@ export async function apiClient<T>(config: AxiosRequestConfig): Promise<T> {
     }
 
     const err = new ApiError(resolveErrorCode(response.status, body?.errorCode), response.status);
-    maybeToast(err);
+    maybeToast(err, config);
     throw err;
   } catch (error) {
     if (error instanceof ApiError) throw error;
@@ -98,24 +103,24 @@ export async function apiClient<T>(config: AxiosRequestConfig): Promise<T> {
 
       if (!error.response) {
         const err = new ApiError('NETWORK', 0, error.message);
-        maybeToast(err);
+        maybeToast(err, config);
         throw err;
       }
       if (body?.errors) {
         const err = new ApiValidationError(body.errors);
-        maybeToast(err);
+        maybeToast(err, config);
         throw err;
       }
 
       // Let ApiError fall back to the human-readable message from errorMap; the
       // raw axios message (e.g. "Request failed with status code 401") is noise.
       const err = new ApiError(resolveErrorCode(status, body?.errorCode), status);
-      maybeToast(err);
+      maybeToast(err, config);
       throw err;
     }
 
     const err = new ApiError('NETWORK', 0);
-    maybeToast(err);
+    maybeToast(err, config);
     throw err;
   }
 }

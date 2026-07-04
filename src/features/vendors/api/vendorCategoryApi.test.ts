@@ -15,7 +15,7 @@ describe('vendorCategoryApi', () => {
   });
 
   it('lists vendor categories', async () => {
-    const categories = [{ id: 'cat-1', name: 'Restaurant' }];
+    const categories = [{ id: 'cat-1', categoryName: 'Restaurant' }];
     const request = vi.spyOn(axiosInstance, 'request').mockResolvedValue({
       data: { isSuccess: true, data: categories, errorCode: 'None' },
       status: 200,
@@ -27,11 +27,11 @@ describe('vendorCategoryApi', () => {
     const result = await listVendorCategories();
 
     expect(request).toHaveBeenCalledWith({ method: 'GET', url: '/VendorCategory' });
-    expect(result).toEqual(categories);
+    expect(result).toEqual([{ id: 'cat-1', name: 'Restaurant' }]);
   });
 
   it('fetches a single vendor category by id', async () => {
-    const category = { id: 'cat-1', name: 'Restaurant' };
+    const category = { id: 'cat-1', CategoryName: 'Restaurant' };
     const request = vi.spyOn(axiosInstance, 'request').mockResolvedValue({
       data: { isSuccess: true, data: category, errorCode: 'None' },
       status: 200,
@@ -43,7 +43,7 @@ describe('vendorCategoryApi', () => {
     const result = await getVendorCategoryById('cat-1');
 
     expect(request).toHaveBeenCalledWith({ method: 'GET', url: '/VendorCategory/cat-1' });
-    expect(result).toEqual(category);
+    expect(result).toEqual({ id: 'cat-1', name: 'Restaurant' });
   });
 
   it('throws a NOT_FOUND ApiError when the category id does not exist', async () => {
@@ -59,7 +59,7 @@ describe('vendorCategoryApi', () => {
   });
 
   it('fetches a single vendor category by exact name, URL-encoding it', async () => {
-    const category = { id: 'cat-3', name: 'Amusement Parks' };
+    const category = { Id: 'cat-3', CategoryName: 'Amusement Parks' };
     const request = vi.spyOn(axiosInstance, 'request').mockResolvedValue({
       data: { isSuccess: true, data: category, errorCode: 'None' },
       status: 200,
@@ -71,7 +71,7 @@ describe('vendorCategoryApi', () => {
     const result = await getVendorCategoryByName('Amusement Parks');
 
     expect(request).toHaveBeenCalledWith({ method: 'GET', url: '/VendorCategory/name/Amusement%20Parks' });
-    expect(result).toEqual(category);
+    expect(result).toEqual({ id: 'cat-3', name: 'Amusement Parks' });
   });
 
   it('throws a NOT_FOUND ApiError when no category matches the name', async () => {

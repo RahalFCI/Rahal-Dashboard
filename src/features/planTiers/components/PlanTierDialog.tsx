@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { Button } from '@/shared/components/ui/button';
 import { Dialog } from '@/shared/components/ui/dialog';
 import { FieldError } from '@/shared/components/ui/field-error';
@@ -31,7 +31,7 @@ const defaultValues: PlanTierFormValues = {
 
 export function PlanTierDialog({ mode, tier, open, onOpenChange, onSubmit, serverError }: Props) {
   const form = useForm<PlanTierFormValues>({
-    resolver: zodResolver(planTierSchema),
+    resolver: zodResolver(planTierSchema) as Resolver<PlanTierFormValues>,
     defaultValues,
   });
 

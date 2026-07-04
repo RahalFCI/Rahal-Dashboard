@@ -1,0 +1,43 @@
+- generic [ref=e2]:
+  - main [ref=e59]:
+    - generic [ref=e60]:
+      - generic [ref=e61]:
+        - img [ref=e63]
+        - generic [ref=e66]:
+          - paragraph [ref=e67]: Rahal
+          - paragraph [ref=e68]: Relic Modernism
+      - generic [ref=e69]:
+        - paragraph [ref=e70]: Operational archive
+        - heading "Manage places, vendors, and explorer records with a quieter hand." [level=1] [ref=e71]
+        - paragraph [ref=e72]: The dashboard keeps Rahal's editorial language, tuned for dense daily operations.
+      - paragraph [ref=e73]: Phase 1 — users, places, categories, and vendor place workflows.
+    - generic [ref=e75]:
+      - generic [ref=e76]:
+        - heading "Sign in" [level=2] [ref=e77]
+        - paragraph [ref=e78]: Admin and vendor access only.
+      - generic [ref=e79]:
+        - paragraph [ref=e80]: Workspace
+        - generic [ref=e81]:
+          - button "Admin" [ref=e82]
+          - button "Vendor" [active] [ref=e83]
+      - generic [ref=e84]:
+        - generic [ref=e85]:
+          - text: Email
+          - textbox "Email" [ref=e86]:
+            - /placeholder: you@example.com
+        - generic [ref=e87]:
+          - text: Password
+          - textbox "Password" [ref=e88]:
+            - /placeholder: ••••••••
+      - button "Enter dashboard" [ref=e89]
+      - generic [ref=e90]:
+        - link "Forgot password" [ref=e91] [cursor=pointer]:
+          - /url: /forgot-password
+        - link "Verify email" [ref=e92] [cursor=pointer]:
+          - /url: /verify-email
+      - paragraph [ref=e93]:
+        - text: New vendor?
+        - link "Create an account →" [ref=e94] [cursor=pointer]:
+          - /url: /register
+  - region "Notifications (F8)":
+    - list

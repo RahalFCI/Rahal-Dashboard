@@ -16,14 +16,23 @@ interface AuthState {
   hydrate: () => void;
 }
 
+function getStorage() {
+  try {
+    return globalThis.localStorage;
+  } catch {
+    return undefined;
+  }
+}
+
 function readStoredSession(): AuthResponseDto | null {
-  const raw = localStorage.getItem(STORAGE_KEY);
+  const storage = getStorage();
+  const raw = storage?.getItem(STORAGE_KEY);
   if (!raw) return null;
 
   try {
     return JSON.parse(raw) as AuthResponseDto;
   } catch {
-    localStorage.removeItem(STORAGE_KEY);
+    storage?.removeItem(STORAGE_KEY);
     return null;
   }
 }
@@ -36,7 +45,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   hasHydrated: false,
   setSession: (session) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    getStorage()?.setItem(STORAGE_KEY, JSON.stringify(session));
     set({
       accessToken: session.accessToken,
       refreshToken: session.refreshToken,
@@ -47,7 +56,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     });
   },
   clearSession: () => {
-    localStorage.removeItem(STORAGE_KEY);
+    getStorage()?.removeItem(STORAGE_KEY);
     set({
       accessToken: null,
       refreshToken: null,
