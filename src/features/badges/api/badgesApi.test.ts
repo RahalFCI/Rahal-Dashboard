@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { axiosInstance } from '@/shared/api/client';
-import { createBadge, deleteBadge, getBadgeById, getBadgeByName, listBadges, restoreBadge, updateBadge } from './badgesApi';
+import { createBadge, deleteBadge, getBadgeById, getBadgeByName, listBadges, permanentDeleteBadge, restoreBadge, updateBadge } from './badgesApi';
 
 describe('badgesApi', () => {
   afterEach(() => {
@@ -262,5 +262,32 @@ describe('badgesApi', () => {
     });
 
     await expect(restoreBadge('badge-1')).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  it('permanently deletes a badge by id', async () => {
+    const request = vi.spyOn(axiosInstance, 'request').mockResolvedValue({
+      data: { isSuccess: true, data: 'Badge permanently deleted', errorCode: 'None' },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {},
+    });
+
+    const result = await permanentDeleteBadge('badge-1');
+
+    expect(request).toHaveBeenCalledWith({ method: 'DELETE', url: '/Badge/badge-1/permanent' });
+    expect(result).toBe('Badge permanently deleted');
+  });
+
+  it('throws a NOT_FOUND ApiError when permanently deleting a badge that does not exist', async () => {
+    vi.spyOn(axiosInstance, 'request').mockResolvedValue({
+      data: { isSuccess: false, data: null, errorCode: 'NotFound' },
+      status: 404,
+      statusText: 'Not Found',
+      headers: {},
+      config: {},
+    });
+
+    await expect(permanentDeleteBadge('missing-badge')).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 });

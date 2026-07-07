@@ -9,6 +9,7 @@ export type ErrorCode =
   | 'NOT_FOUND'
   | 'FORBIDDEN'
   | 'INVALID_CREDENTIALS'
+  | 'CONFLICT'
   | 'ALREADY_EXISTS'
   | 'LOCKED_OUT'
   | 'EMAIL_NOT_VERIFIED'
@@ -30,6 +31,7 @@ const backendStringCodeMap: Record<string, ErrorCode> = {
   InvalidCredentials: 'INVALID_CREDENTIALS',
   NotFound: 'NOT_FOUND',
   AlreadyExists: 'ALREADY_EXISTS',
+  Conflict: 'CONFLICT',
   Unauthorized: 'UNAUTHORIZED',
   LockedOut: 'LOCKED_OUT',
   Forbidden: 'FORBIDDEN',
@@ -49,6 +51,7 @@ export const errorMap: Record<ErrorCode, { message: string; tier: ErrorTier }> =
   NOT_FOUND: { message: 'The requested record was not found.', tier: 'toast' },
   FORBIDDEN: { message: 'You do not have access to this action.', tier: 'toast' },
   INVALID_CREDENTIALS: { message: 'Invalid email or password.', tier: 'screen' },
+  CONFLICT: { message: 'This record is still in use or conflicts with an existing one.', tier: 'toast' },
   ALREADY_EXISTS: { message: 'A matching record already exists.', tier: 'screen' },
   LOCKED_OUT: { message: 'This account is locked.', tier: 'screen' },
   EMAIL_NOT_VERIFIED: { message: 'This account email is not verified.', tier: 'screen' },

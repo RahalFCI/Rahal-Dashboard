@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Edit, Eye, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { Edit, Eye, LayoutGrid, List, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/shared/components/ui/button';
@@ -37,6 +37,7 @@ import {
   updatePlace,
 } from '../api/placesApi';
 import { CategoryPlacesDialog } from '../components/CategoryPlacesDialog';
+import { PlaceCardList, type PlaceListLayout } from '../components/PlaceCardList';
 import { PlaceDialog } from '../components/PlaceDialog';
 import { PlaceTable } from '../components/PlaceTable';
 import type { PlaceFormValues } from '../schemas';
@@ -69,6 +70,8 @@ const SEARCH_PAGE_SIZE = 10;
 
 export function PlacesPage() {
   const [view, setView] = useState<PlacesView>('places');
+  const [layout, setLayout] = useState<PlaceListLayout>('list');
+  const [headerQuery, setHeaderQuery] = useState('');
   const [page, setPage] = useState(1);
   const [selectedPlace, setSelectedPlace] = useState<GetPlaceDto | null>(null);
   const [placeDialogOpen, setPlaceDialogOpen] = useState(false);
@@ -95,6 +98,15 @@ export function PlacesPage() {
 
   const placesQuery = useQuery({ queryKey: ['places', page], queryFn: () => listPlaces(page, 10), enabled: view === 'places' });
   const categoriesQuery = useQuery({ queryKey: ['categories'], queryFn: listCategories });
+
+  // Header search bar filters the currently loaded page of places client-side
+  // - separate from the dedicated "Search by Name" tab, which bulk-fetches and
+  // paginates across every place.
+  const visiblePlaces = useMemo(() => {
+    const items = placesQuery.data?.items ?? [];
+    if (!headerQuery.trim()) return items;
+    return items.filter((place) => matchesQuery(place, headerQuery));
+  }, [placesQuery.data, headerQuery]);
 
   // Search view: bulk-fetch all places once and filter/paginate client-side.
   // Moved here from the old cross-feature SearchPage's places tab.
@@ -224,18 +236,31 @@ export function PlacesPage() {
         description="Curated places and the category taxonomy used by discovery, vendor onboarding, and place creation."
         actions={
           view === 'places' ? (
-            <Button
-              type="button"
-              onClick={() => {
-                setSelectedPlace(null);
-                setCreatedPlaceId(null);
-                setPhotoErrorMessage(null);
-                setPlaceDialogOpen(true);
-              }}
-            >
-              <Plus size={17} />
-              New place
-            </Button>
+            <>
+              <div className="relative">
+                <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant" />
+                <Input
+                  type="search"
+                  placeholder="Search destinations..."
+                  value={headerQuery}
+                  onChange={(event) => setHeaderQuery(event.target.value)}
+                  className="mt-0 w-64 rounded-full border-0 bg-surface-low py-2 pl-10 focus:border-0"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="dark"
+                onClick={() => {
+                  setSelectedPlace(null);
+                  setCreatedPlaceId(null);
+                  setPhotoErrorMessage(null);
+                  setPlaceDialogOpen(true);
+                }}
+              >
+                <Plus size={17} />
+                Add Place
+              </Button>
+            </>
           ) : view === 'categories' ? (
             <Button
               type="button"
@@ -361,23 +386,58 @@ export function PlacesPage() {
           {placesQuery.isError ? <ErrorState onRetry={() => void placesQuery.refetch()} /> : null}
           {placesQuery.data?.items.length === 0 ? <EmptyState title="No places yet" description="Create the first dashboard-managed place." /> : null}
           {placesQuery.data && placesQuery.data.items.length > 0 ? (
-            <Panel className="overflow-hidden">
-              <PlaceTable
-                places={placesQuery.data.items}
-                categories={categoriesQuery.data ?? []}
-                onEdit={(place) => {
-                  setSelectedPlace(place);
-                  setCreatedPlaceId(null);
-                  setPhotoErrorMessage(null);
-                  setPlaceDialogOpen(true);
-                }}
-                onDelete={(place) => void deletePlaceMutation.mutate(place)}
-                onViewCheckIns={(place) => setViewCheckInsPlace(place)}
-                onViewChallenges={(place) => setViewChallengesPlace(place)}
-                onViewReviews={(place) => setViewReviewsPlace(place)}
-              />
-              <PaginationBar page={page} result={placesQuery.data} onPageChange={setPage} />
-            </Panel>
+            <>
+              <div className="mb-4 flex justify-end">
+                <div className="inline-flex gap-1 rounded-lg bg-surface-low p-1">
+                  <button
+                    type="button"
+                    aria-label="List view"
+                    onClick={() => setLayout('list')}
+                    className={cn(
+                      'focus-ring grid size-8 place-items-center rounded-md text-on-surface-variant transition-colors',
+                      layout === 'list' && 'bg-primary text-white',
+                    )}
+                  >
+                    <List size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Grid view"
+                    onClick={() => setLayout('grid')}
+                    className={cn(
+                      'focus-ring grid size-8 place-items-center rounded-md text-on-surface-variant transition-colors',
+                      layout === 'grid' && 'bg-primary text-white',
+                    )}
+                  >
+                    <LayoutGrid size={16} />
+                  </button>
+                </div>
+              </div>
+
+              {visiblePlaces.length === 0 ? (
+                <EmptyState title="No matches" description={`No places matched "${headerQuery}".`} />
+              ) : (
+                <PlaceCardList
+                  places={visiblePlaces}
+                  categories={categoriesQuery.data ?? []}
+                  layout={layout}
+                  onEdit={(place) => {
+                    setSelectedPlace(place);
+                    setCreatedPlaceId(null);
+                    setPhotoErrorMessage(null);
+                    setPlaceDialogOpen(true);
+                  }}
+                  onDelete={(place) => void deletePlaceMutation.mutate(place)}
+                  onViewCheckIns={(place) => setViewCheckInsPlace(place)}
+                  onViewChallenges={(place) => setViewChallengesPlace(place)}
+                  onViewReviews={(place) => setViewReviewsPlace(place)}
+                />
+              )}
+
+              <div className="mt-5">
+                <PaginationBar page={page} result={placesQuery.data} onPageChange={setPage} />
+              </div>
+            </>
           ) : null}
         </>
       ) : (

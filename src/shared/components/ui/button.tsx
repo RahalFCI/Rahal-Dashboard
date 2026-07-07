@@ -12,6 +12,7 @@ const buttonVariants = cva(
         secondary: 'bg-primary-container text-primary hover:bg-[#f3d58a]',
         ghost: 'bg-transparent text-on-surface hover:bg-surface-mid',
         danger: 'bg-error text-white hover:bg-[#9b1515]',
+        dark: 'bg-inverse-surface text-inverse-on-surface hover:bg-[#231f19]',
       },
       size: {
         sm: 'h-8 px-3 text-xs',
