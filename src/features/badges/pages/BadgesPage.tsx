@@ -27,8 +27,8 @@ export function BadgesPage() {
   const [badgeDialogOpen, setBadgeDialogOpen] = useState(false);
   const [viewBadgeId, setViewBadgeId] = useState<string | null>(null);
   const [nameFilter, setNameFilter] = useState('');
-  const [confirmPermanentDeleteId, setConfirmPermanentDeleteId] = useState<string | null>(null);
   const [confirmDeleteBadge, setConfirmDeleteBadge] = useState<GetBadgeDto | null>(null);
+  const [confirmPermanentDeleteBadge, setConfirmPermanentDeleteBadge] = useState<GetBadgeDto | null>(null);
 
   // GET /Badge/name/{name} (exposed as getBadgeByName) only does an exact,
   // case-sensitive match, so it can't power a type-as-you-go, case-insensitive
@@ -84,12 +84,12 @@ export function BadgesPage() {
   const permanentDeleteBadgeMutation = useMutation({
     mutationFn: (id: string) => permanentDeleteBadge(id),
     onSuccess: () => {
-      setConfirmPermanentDeleteId(null);
+      setConfirmPermanentDeleteBadge(null);
       invalidateBadges();
       useToastStore.getState().add({ message: 'Badge permanently deleted.', variant: 'success' });
     },
     onError: (error) => {
-      setConfirmPermanentDeleteId(null);
+      setConfirmPermanentDeleteBadge(null);
       toastOnError(error);
     },
   });
@@ -234,7 +234,7 @@ export function BadgesPage() {
                           size="icon"
                           aria-label="Permanently delete badge"
                           className="text-error hover:text-error"
-                          onClick={() => setConfirmPermanentDeleteId(badge.id)}
+                          onClick={() => setConfirmPermanentDeleteBadge(badge)}
                         >
                           <Trash size={16} />
                         </Button>
@@ -271,27 +271,6 @@ export function BadgesPage() {
         }}
       />
 
-      <Dialog
-        open={confirmPermanentDeleteId !== null}
-        onOpenChange={(open) => { if (!open) setConfirmPermanentDeleteId(null); }}
-        title="Permanently delete badge?"
-        description="This cannot be undone. The badge and all associated data will be removed from the database entirely and cannot be restored."
-      >
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="ghost" onClick={() => setConfirmPermanentDeleteId(null)}>
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            className="bg-error text-on-error hover:bg-error/90"
-            disabled={permanentDeleteBadgeMutation.isPending}
-            onClick={() => confirmPermanentDeleteId && permanentDeleteBadgeMutation.mutate(confirmPermanentDeleteId)}
-          >
-            Delete permanently
-          </Button>
-        </div>
-      </Dialog>
-
       <ConfirmDialog
         open={confirmDeleteBadge !== null}
         title={confirmDeleteBadge ? `Delete "${confirmDeleteBadge.name}"?` : 'Delete badge?'}
@@ -303,6 +282,27 @@ export function BadgesPage() {
         }}
         onCancel={() => setConfirmDeleteBadge(null)}
       />
+
+      <Dialog
+        open={confirmPermanentDeleteBadge !== null}
+        onOpenChange={(open) => { if (!open) setConfirmPermanentDeleteBadge(null); }}
+        title={confirmPermanentDeleteBadge ? `Permanently delete "${confirmPermanentDeleteBadge.name}"?` : 'Permanently delete badge?'}
+        description="This cannot be undone. The badge will be removed from the database entirely and cannot be restored."
+      >
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="ghost" onClick={() => setConfirmPermanentDeleteBadge(null)}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            className="bg-error text-on-error hover:bg-error/90"
+            disabled={permanentDeleteBadgeMutation.isPending}
+            onClick={() => confirmPermanentDeleteBadge && permanentDeleteBadgeMutation.mutate(confirmPermanentDeleteBadge.id)}
+          >
+            Delete permanently
+          </Button>
+        </div>
+      </Dialog>
     </>
   );
 }
